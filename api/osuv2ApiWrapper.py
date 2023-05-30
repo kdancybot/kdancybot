@@ -1,7 +1,6 @@
 import requests
 import logging
 
-from Utils import *
 from Token import ApiToken, ChatToken
 from Credentials import Credentials
 
@@ -83,7 +82,8 @@ class osuv2ApiWrapper:
 
     def get_beatmap_attributes(self, beatmap_id, mods=""):
         endpoint = f"{Template.beatmaps}{beatmap_id}/attributes"
-        data = generate_mods_payload(mods)
+        # data = generate_mods_payload(mods)
+        data = mods
         response = self.post_request(endpoint, headers=self.api_headers(), data=data)
         return response
 

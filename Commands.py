@@ -11,7 +11,7 @@ osu = osuv2ApiWrapper()
 
 def score_info(score_data):
     beatmap_attributes = osu.get_beatmap_attributes(
-        score_data["beatmap"]["id"], score_data["mods"]
+        score_data["beatmap"]["id"], generate_mods_payload(score_data["mods"])
     ).json()["attributes"]
 
     message = "https://osu.ppy.sh/b/" + str(score_data["beatmap"]["id"]) + " "
