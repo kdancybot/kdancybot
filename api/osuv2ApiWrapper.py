@@ -1,6 +1,7 @@
 import requests
 import logging
 
+from Utils import *
 from Token import ApiToken, ChatToken
 from Credentials import Credentials
 
@@ -58,7 +59,7 @@ class osuv2ApiWrapper:
         return response
 
     def get_last_played(self, user):
-        url = f"{Template.users}{str(user)}/scores/recent?limit=1&include_fails=1"
+        endpoint = f"{Template.users}{str(user)}/scores/recent?limit=1&include_fails=1"
         response = self.get_request(endpoint, headers=self.api_headers())
         return response
 
@@ -81,7 +82,7 @@ class osuv2ApiWrapper:
         return response
 
     def get_beatmap_attributes(self, beatmap_id, mods=""):
-        url = f"{Template.beatmaps}{beatmap_id}/attributes"
+        endpoint = f"{Template.beatmaps}{beatmap_id}/attributes"
         data = generate_mods_payload(mods)
         response = self.post_request(endpoint, headers=self.api_headers(), data=data)
         return response
