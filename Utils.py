@@ -33,13 +33,13 @@ def map_name_from_response(score_data):
 
 def pp_to_overtake(top100, user_pp, goal_pp):
     pp_value = -1
-    if full_pp >= goal_pp:
+    if user_pp >= goal_pp:
         return pp_value
 
     pp_values = [score["pp"] for score in top100]
     weighted = [0.95**i * pp_values[i] for i in range(len(pp_values))]
     wsum = sum(weighted)
-    bonus_pp = full_pp - wsum
+    bonus_pp = user_pp - wsum
     temp = pp_values
 
     # if player gets pp record and still doesn't get goal pp
@@ -134,26 +134,3 @@ def generate_mods_payload(mods):
     if len(payload):
         payload = payload[:-1]
     return payload
-
-
-def prepare_ppdiff_message(top100, goal_pp):
-    if userpp > otherpp:
-        message = (
-            user
-            + " is "
-            + str(round(userpp - otherpp, 1))
-            + "pp ahead of "
-            + other
-            + ". "
-        )
-        message += message_to_overtake(other_data.json(), user_data.json())
-    else:
-        message = (
-            user
-            + " is "
-            + str(round(otherpp - userpp, 1))
-            + "pp behind "
-            + other
-            + ". "
-        )
-        message += message_to_overtake(user_data.json(), other_data.json())

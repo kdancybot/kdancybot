@@ -82,8 +82,9 @@ def score_info(score_data):
 def get_users_from_query(query):
     query = re.sub("%..", " ", query)
     tokens = [x.strip() for x in query.split(" ") if x.strip()]
-
     query = " ".join(tokens)
+    logging.debug(f"'{query}'")
+
     user_data = osu.get_user_data(DEFAULT_USER)
     other_data = osu.get_user_data(query)
     if user_data.ok and other_data.ok:
@@ -97,6 +98,33 @@ def get_users_from_query(query):
         if user_data.ok and other_data.ok:
             return user_data, other_data, user, other
     return None, None, None, None
+
+
+def prepare_ppdiff_message(user_data, other_data):
+    userpp = user_data["statistics"]["pp"]
+    otherpp = other_data["statistics"]["pp"]
+
+    if userpp > otherpp:
+        message = (
+            user_data["username"]
+            + " is "
+            + str(round(userpp - otherpp, 1))
+            + "pp ahead of "
+            + other_data["username"]
+            + ". "
+        )
+        message += message_to_overtake(other_data, user_data)
+    else:
+        message = (
+            user_data["username"]
+            + " is "
+            + str(round(otherpp - userpp, 1))
+            + "pp behind "
+            + other_data["username"]
+            + ". "
+        )
+        message += message_to_overtake(user_data, other_data)
+    return message
 
 
 def message_to_overtake(user_data, other_data):
@@ -130,12 +158,10 @@ def pp(request):
     if not (user_data and other_data and (user_data.ok and other_data.ok)):
         return "Could not find such user(s) NOOOO"
 
-    user = username_from_response(user_data, user)
-    other = username_from_response(other_data, other)
+    # user = username_from_response(user_data, user)
+    # other = username_from_response(other_data, other)
 
-    userpp = user_data.json()["statistics"]["pp"]
-    otherpp = other_data.json()["statistics"]["pp"]
-
+    message = prepare_ppdiff_message(user_data.json(), other_data.json())
     return message
 
 
