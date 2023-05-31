@@ -89,7 +89,7 @@ class osuv2ApiWrapper:
 
     def get_beatmap(self, beatmap_id):
         endpoint = f"{Template.beatmaps}{beatmap_id}"
-        response = self.post_request(endpoint, headers=self.api_headers())
+        response = self.get_request(endpoint, headers=self.api_headers())
         return response
 
     # Chat methods
