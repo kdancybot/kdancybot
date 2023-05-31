@@ -103,24 +103,25 @@ def get_users_from_query(query):
 def prepare_ppdiff_message(user_data, other_data):
     userpp = user_data["statistics"]["pp"]
     otherpp = other_data["statistics"]["pp"]
+    # username = username_from_response(user_data)
 
     if userpp > otherpp:
         message = (
-            user_data["username"]
+            username_from_response(user_data)
             + " is "
             + str(round(userpp - otherpp, 1))
             + "pp ahead of "
-            + other_data["username"]
+            + username_from_response(user_data)
             + ". "
         )
         message += message_to_overtake(other_data, user_data)
     else:
         message = (
-            user_data["username"]
+            username_from_response(user_data)
             + " is "
             + str(round(otherpp - userpp, 1))
             + "pp behind "
-            + other_data["username"]
+            + username_from_response(other_data)
             + ". "
         )
         message += message_to_overtake(user_data, other_data)
@@ -183,7 +184,9 @@ def recent(request):
     recent_score = osu.get_last_played(user_data.json()["id"])
     if not recent_score.ok or len(recent_score.json()) == 0:
         return (
-            "No scores for " + username_from_response(user_data) + " in last 24 hours"
+            "No scores for "
+            + username_from_response(user_data.json())
+            + " in last 24 hours"
         )
 
     score_data = recent_score.json()[0]
@@ -214,8 +217,8 @@ def whatif(request):
 
     user = DEFAULT_USER
     user_data = osu.get_user_data(user)
-    message = username_from_response(user_data) + " needs to get a "
     user_data = user_data.json()
+    message = username_from_response(user_data) + " needs to get a "
     full_pp = user_data["statistics"]["pp"]
     top100 = osu.get_top_100(user).json()
     pp_values = [score["pp"] for score in top100]
@@ -255,8 +258,8 @@ def recentbest(request):
     if not user_data.ok:
         return "Unknown user MyHonestReaction"
 
-    username = username_from_response(user_data)
     user_data = user_data.json()
+    username = username_from_response(user_data)
     full_pp = user_data["statistics"]["pp"]
     top100 = osu.get_top_100(user_data["id"]).json()
     score_data = max(top100, key=lambda score: score["created_at"])
@@ -289,8 +292,8 @@ def todaybest(request):
     user_data = osu.get_user_data(query)
     if not user_data.ok:
         return "Who is this Concerned"
-    username = username_from_response(user_data)
     user_data = user_data.json()
+    username = username_from_response(user_data)
     full_pp = user_data["statistics"]["pp"]
     recent_plays = sorted(
         osu.get_today_scores(user_data["id"]).json(),

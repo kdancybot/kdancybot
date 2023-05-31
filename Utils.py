@@ -23,8 +23,8 @@ Mods = {
 
 def username_from_response(response, username=""):
     if str(username).lower() not in ["leva_russian", "peko_russian"]:
-        username = response.json()["username"]
-    return username + " (#" + str(response.json()["statistics"]["global_rank"]) + ")"
+        username = response["username"]
+    return username + " (#" + str(response["statistics"]["global_rank"]) + ")"
 
 
 def map_name_from_response(score_data):
