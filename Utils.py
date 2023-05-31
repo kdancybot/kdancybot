@@ -28,7 +28,9 @@ def username_from_response(response, username=""):
 
 
 def map_name_from_response(score_data):
-    return f"{score_data['beatmapset']['artist']} - {score_data['beatmapset']['title']} [{score_data['beatmap']['version']}]"
+    # Very bad hack
+    beatmap = score_data.get("beatmap", score_data)
+    return f"{score_data['beatmapset']['artist']} - {score_data['beatmapset']['title']} [{beatmap['version']}]"
 
 
 def pp_to_overtake(top100, user_pp, goal_pp):
