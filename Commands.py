@@ -81,9 +81,11 @@ def score_info(score_data):
 # TODO: REWRITE IT FFS
 def get_users_from_query(query):
     query = re.sub("%..", " ", query)
+    query = re.sub("[^a-zA-Z0-9\[\]\-_ ]", "", query)
     tokens = [x.strip() for x in query.split(" ") if x.strip()]
     query = " ".join(tokens)
-    logging.debug(f"'{query}'")
+    logging.info(f"'{query}'")
+    logging.info(f"{tokens}")
 
     user_data = osu.get_user_data(DEFAULT_USER)
     other_data = osu.get_user_data(query)
