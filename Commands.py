@@ -338,14 +338,16 @@ def req(request):
         return "RIPBOZO"
     try:
         beatmap = query.split("/")[-1]
+        beatmap = re.sub("[^0-9]", "", beatmap)
         beatmap_id = int(beatmap)
     except:
         return "failed to parse beatmap id, are you sure it's correct?"
 
     beatmap = osu.get_beatmap(beatmap_id)
     if beatmap.ok:
-        message = f"{user} | [{BEATMAP_URL}{beatmap_id} {map_name_from_response(beatmap.json())}]"
+        map_name = map_name_from_response(beatmap.json())
+        message = f"{user} | [{BEATMAP_URL}{beatmap_id} {map_name}]"
         response = osu.send_pm(DEFAULT_USER, message)
-        return "Sent beatmap"
+        return f"{user} sent request: {map_name}"
     else:
-        return "Incorrect beatmap, are you sure"
+        return "Seems like beatmap does not exist, are you sure dogQ"
