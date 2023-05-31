@@ -71,11 +71,11 @@ def score_info(score_data):
     return message
 
 
-def get_user_pair(lhs: str, rhs: str):
-    tasks = [asyncio.ensure_future(get_user_data(u)) for u in [lhs, rhs]]
-    users = asyncio.gather(*tasks)
-    if users[0].ok and users[1].ok:
-        return users
+# def get_user_pair(lhs: str, rhs: str):
+#     tasks = [asyncio.ensure_future(get_user_data(u)) for u in [lhs, rhs]]
+#     users = asyncio.gather(*tasks)
+#     if users[0].ok and users[1].ok:
+#         return users
 
 
 # TODO: REWRITE IT FFS
@@ -302,6 +302,7 @@ def req(request):
     # return 'ChiconyBusiness Send map link to osu!pm'
     BEATMAP_URL = "https://osu.ppy.sh/b/"
     query = request.args.get("query")
+    user = request.args.get("user")
     if not query:
         return "RIPBOZO"
     try:
@@ -310,6 +311,10 @@ def req(request):
     except:
         return "failed to parse beatmap id, are you sure it's correct?"
 
-    message = f"{BEATMAP_URL}{beatmap_id}"
-    response = osu.send_pm(DEFAULT_USER, message)
-    return "Sent beatmap"
+    beatmap = osu.get_beatmap(beatmap_id)
+    if beatmap.ok:
+        message = f"{user} | [{BEATMAP_URL}{beatmap_id} {map_name_from_response(beatmap.json())}]"
+        response = osu.send_pm(DEFAULT_USER, message)
+        return "Sent beatmap"
+    else:
+        return "Incorrect beatmap, are you sure"

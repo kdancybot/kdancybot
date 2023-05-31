@@ -87,6 +87,11 @@ class osuv2ApiWrapper:
         response = self.post_request(endpoint, headers=self.api_headers(), data=data)
         return response
 
+    def get_beatmap(self, beatmap_id):
+        endpoint = f"{Template.beatmaps}{beatmap_id}"
+        response = self.post_request(endpoint, headers=self.api_headers())
+        return response
+
     # Chat methods
 
     def send_pm(self, target_id, message="default message", is_action=False):
