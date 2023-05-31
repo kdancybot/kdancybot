@@ -82,3 +82,8 @@ class ChatToken(Token):
         self._token = response.json()["access_token"]
         Credentials.refresh_token = response.json()["refresh_token"]
         logging.info(Credentials.refresh_token)
+
+        # Saving token like this for now
+        f = open("refresh_token.txt", "w")
+        f.write(Credentials.refresh_token)
+        f.close()
