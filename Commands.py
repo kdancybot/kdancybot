@@ -113,7 +113,7 @@ def prepare_ppdiff_message(user_data, other_data):
             + " is "
             + str(round(userpp - otherpp, 1))
             + "pp ahead of "
-            + username_from_response(user_data)
+            + username_from_response(other_data)
             + ". "
         )
         message += message_to_overtake(other_data, user_data)
