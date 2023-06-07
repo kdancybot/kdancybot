@@ -80,7 +80,7 @@ class ChatToken(Token):
             seconds=response.json()["expires_in"]
         )
         self._token = response.json()["access_token"]
-        Credentials.refresh_token = response.json()["refresh_token"]
+        self.apiv2payload["refresh_token"] = response.json()["refresh_token"]
         logging.info(Credentials.refresh_token)
 
         # Saving token like this for now
