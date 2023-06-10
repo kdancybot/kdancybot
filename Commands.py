@@ -67,7 +67,8 @@ def score_info(score_data):
         )
     if score_data["beatmap"]["status"] != "ranked":
         message += " if ranked"
-    message = message.replace('"', '"')
+    # message = message.replace('"', '\\"')
+    message = message.replace('"', "")
     return message
 
 
