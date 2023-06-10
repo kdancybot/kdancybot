@@ -81,7 +81,8 @@ class ChatToken(Token):
         )
         self._token = response.json()["access_token"]
         self.apiv2payload["refresh_token"] = response.json()["refresh_token"]
-        logging.info(Credentials.refresh_token)
+        Credentials.refresh_token = self.apiv2payload["refresh_token"]
+        logging.debug(Credentials.refresh_token)
 
         # Saving token like this for now
         f = open("refresh_token.txt", "w")
