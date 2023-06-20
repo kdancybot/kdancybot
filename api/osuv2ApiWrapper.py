@@ -4,14 +4,12 @@ import logging
 from Token import ApiToken, ChatToken
 from Credentials import Credentials
 
-logging.basicConfig(filename="api.log", encoding="utf-8", level=logging.INFO)
-
 
 class osuv2ApiWrapper:
-    def __init__(self):
+    def __init__(self, config):
         super().__init__()
-        self.api_token = ApiToken()
-        self.chat_token = ChatToken()
+        self.api_token = ApiToken(config)
+        self.chat_token = ChatToken(config)
         self.request_headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "Accept": "application/json",
