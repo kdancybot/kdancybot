@@ -68,7 +68,6 @@ class TwitchChatHandler:
         if message.message[0] == "!":
             command = message.message.split()[0][1:]
             command_func = self.command_templates.get(command)
-            logging.debug(command_func)
             if command_func:
                 message.message = " ".join(
                     [
@@ -77,11 +76,9 @@ class TwitchChatHandler:
                         if x.strip()
                     ]
                 )
-                logging.debug(message)
                 ret = await asyncio.get_event_loop().run_in_executor(
                     self.executor, command_func, message
                 )
-                logging.debug(ret)
                 if ret:
                     await ws.send("PRIVMSG #{} :{}".format(message.channel, ret))
 
@@ -89,13 +86,12 @@ class TwitchChatHandler:
         # await asyncio.gather(
         #     self.handle_requests(ws, message), self.handle_commands(ws, message)
         # )
-        logging.debug(message)
+        await self.handle_requests(ws, message)
         await self.handle_commands(ws, message)
 
     async def handle_message(self, ws, message):
         try:
             if message.type == "PRIVMSG":
-                logging.debug(message)
                 await self.handle_privmsg(ws, message)
         except Exception as e:
             # logging.warning(traceback.print_exc())
@@ -124,7 +120,6 @@ class TwitchChatHandler:
                 while True:
                     msg = await ws.recv()
                     message = Message(msg)
-                    logging.debug(message)
                     await self.handle_message(ws, message)
             except websockets.exceptions.ConnectionClosed:
                 continue
