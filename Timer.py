@@ -9,26 +9,28 @@ class Timer:
         self.paused = True
 
     def resume(self, message: Message.Message):
+        print(message.user, "|")
+        print(message.channel, "|")
         if self.paused and (
-            message.user == message.channel or message.tags.get("moderator")
+            message.user == message.channel or int(message.tags.get("mod"))
         ):
             self.resume_time = datetime.now()
             self.paused = False
-            return f"Timer is now running. {self.timer()}"
+            return f"Timer is now running. {self.time(message)}"
         return "dogQ"
 
     def pause(self, message: Message.Message):
         if not self.paused and (
-            message.user == message.channel or message.tags.get("moderator")
+            message.user == message.channel or int(message.tags.get("mod"))
         ):
             self.current_time += datetime.now() - self.resume_time
             self.paused = True
-            return f"Timer is now paused. {self.timer()}"
+            return f"Timer is now paused. {self.time(message)}"
         return "dogQ"
 
-    def timer(self, message):
+    def time(self, message):
         td = self.current_time
-        if self.paused:
+        if not self.paused:
             td += datetime.now() - self.resume_time
         hours, minutes, seconds = (
             td.seconds // 3600,
