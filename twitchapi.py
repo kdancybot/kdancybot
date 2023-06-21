@@ -4,6 +4,7 @@ import websockets
 import re
 import logging
 from Commands import Commands
+from Timer import Timer
 
 
 def parse_beatmap_link(message):
@@ -29,6 +30,7 @@ class TwitchChatHandler:
     def __init__(self, config: dict):
         self.token = TwitchToken(config)
         self.commands = Commands(config)
+        self.timer = Timer(4, 26, 0)
         self.url = "ws://irc-ws.chat.twitch.tv:80"
         self.username = "kdancybot"
         self.ignored_users = [self.username, "nightbot", "streamelements"]
@@ -41,8 +43,9 @@ class TwitchChatHandler:
             "todaybest": self.commands.todaybest,
             "ppdiff": self.commands.ppdiff,
             "whatif": self.commands.whatif,
-            "time": self.commands.timer,
-            "update_timer": self.commands.update_timer,
+            "time": self.timer.time,
+            "pause": self.timer.pause,
+            "resume": self.timer.resume,
         }
 
     async def handle_requests(self, ws, message):
