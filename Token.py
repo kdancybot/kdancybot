@@ -1,6 +1,5 @@
 import requests
 import logging
-from Credentials import Credentials
 from datetime import datetime, timedelta
 
 

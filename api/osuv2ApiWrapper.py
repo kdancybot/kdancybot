@@ -2,7 +2,6 @@ import requests
 import logging
 
 from Token import ApiToken, ChatToken
-from Credentials import Credentials
 
 
 class osuv2ApiWrapper:
