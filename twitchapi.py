@@ -5,6 +5,9 @@ import re
 import logging
 from Commands import Commands
 from Timer import Timer
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
+import traceback
 
 
 def parse_beatmap_link(message):
@@ -28,6 +31,7 @@ def parse_beatmap_link(message):
 
 class TwitchChatHandler:
     def __init__(self, config: dict):
+        self.config = config
         self.token = TwitchToken(config)
         self.commands = Commands(config)
         self.timer = Timer(4, 26, 0)
@@ -47,26 +51,24 @@ class TwitchChatHandler:
             "pause": self.timer.pause,
             "resume": self.timer.resume,
         }
+        self.executor = ThreadPoolExecutor()
 
     async def handle_requests(self, ws, message):
         if message.user.lower() not in self.ignored_users:
             map_id = parse_beatmap_link(message.message)
             if map_id:
-                ret = self.commands.req(message, map_id)
+                ret = await asyncio.get_event_loop().run_in_executor(
+                    self.executor, self.commands.req, message, map_id
+                )
                 if ret:
                     await ws.send("PRIVMSG #{} :{}".format(message.channel, ret))
 
     async def handle_commands(self, ws, message):
-        if message.user.lower() not in self.ignored_users:
-            map_id = parse_beatmap_link(message.message)
-            if map_id:
-                ret = self.commands.req(message, map_id)
-                if ret:
-                    await ws.send("PRIVMSG #{} :{}".format(message.channel, ret))
         # logging.warning(message.message[0])
         if message.message[0] == "!":
             command = message.message.split()[0][1:]
             command_func = self.command_templates.get(command)
+            logging.debug(command_func)
             if command_func:
                 message.message = " ".join(
                     [
@@ -75,7 +77,11 @@ class TwitchChatHandler:
                         if x.strip()
                     ]
                 )
-                ret = command_func(message)
+                logging.debug(message)
+                ret = await asyncio.get_event_loop().run_in_executor(
+                    self.executor, command_func, message
+                )
+                logging.debug(ret)
                 if ret:
                     await ws.send("PRIVMSG #{} :{}".format(message.channel, ret))
 
@@ -83,22 +89,31 @@ class TwitchChatHandler:
         # await asyncio.gather(
         #     self.handle_requests(ws, message), self.handle_commands(ws, message)
         # )
+        logging.debug(message)
         await self.handle_commands(ws, message)
 
     async def handle_message(self, ws, message):
         try:
             if message.type == "PRIVMSG":
+                logging.debug(message)
                 await self.handle_privmsg(ws, message)
-        except Exception:
-            pass
+        except Exception as e:
+            # logging.warning(traceback.print_exc())
+            logging.warning(e)
 
     async def login(self, ws):
+        token = await asyncio.get_event_loop().run_in_executor(
+            self.executor, self.token.token
+        )
         await ws.send("CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands")
-        await ws.send("PASS oauth:{}".format(self.token.token()))
+        await ws.send("PASS oauth:{}".format(token))
         await ws.send("NICK {}".format(self.username))
 
     async def join_channels(self, ws):
-        await ws.send("JOIN #chicony")
+        join_message = "JOIN #" + ",#".join(
+            [channel for channel in self.config["users"].keys()]
+        )
+        await ws.send(join_message)
 
     async def loop(self):
         async for ws in websockets.connect(self.url):
@@ -109,7 +124,7 @@ class TwitchChatHandler:
                 while True:
                     msg = await ws.recv()
                     message = Message(msg)
-                    logging.warning(message.message)
+                    logging.debug(message)
                     await self.handle_message(ws, message)
             except websockets.exceptions.ConnectionClosed:
                 continue
