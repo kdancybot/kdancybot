@@ -98,15 +98,15 @@ class TwitchChatHandler:
         await ws.send("JOIN #chicony")
 
     async def loop(self):
-        async with websockets.connect(self.url) as ws:
-            await self.login(ws)
-            await self.join_channels(ws)
-            logging.warning("Joined twitch chat!")
-            while True:
-                try:
+        async for ws in websockets.connect(self.url):
+            try:
+                await self.login(ws)
+                await self.join_channels(ws)
+                logging.warning("Joined twitch chat!")
+                while True:
                     msg = await ws.recv()
                     message = Message(msg)
                     logging.warning(message.message)
                     await self.handle_message(ws, message)
-                except websockets.exceptions.ConnectionClosedError:
-                    pass
+            except websockets.exceptions.ConnectionClosed:
+                continue

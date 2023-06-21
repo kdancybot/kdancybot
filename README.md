@@ -1,7 +1,6 @@
 <h1 align="center">kdancybot 🤖</h1>
 
 osu! extension for twitch bots written in Python/Flask
-<!-- <h2 align="center">Supported commands 🤯</h2> -->
 ## Supported commands 🤯
 
 * **!request**    (requests a map to a streamer)
