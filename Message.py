@@ -1,3 +1,4 @@
+from string import printable
 import logging
 
 logger = logging.getLogger(__name__)
@@ -115,7 +116,9 @@ class Message:
             if ord(message[0]) == 1 and message[1:7] == "ACTION":
                 # Replace ╔ACTION with /me, and remove the last ╔
                 message = "/me" + message[7:-1]
-            self.message = message.strip()
+            self.message = "".join(
+                char for char in message.strip() if char in printable
+            )
         else:
             self.message = ""
 
