@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import api.osuv2ApiWrapper
+import api.osuAPIv2
 import Commands
 
 from flask import Flask, request
@@ -80,6 +80,11 @@ def ppcounter():
 @app.route("/request")
 def req():
     return Commands.req(request)
+
+
+@app.route("/rpp")
+def rpp():
+    return Commands.rpp(request)
 
 
 # @app.route("/authorization")

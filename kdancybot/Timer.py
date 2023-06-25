@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-import Message
+import kdancybot.Message
 
 
 class Timer:
@@ -8,7 +8,7 @@ class Timer:
         self.resume_time = datetime.now()
         self.paused = True
 
-    def resume(self, message: Message.Message):
+    def resume(self, message: kdancybot.Message.Message):
         print(message.user, "|")
         print(message.channel, "|")
         if self.paused and (
@@ -19,7 +19,7 @@ class Timer:
             return f"Timer is now running. {self.time(message)}"
         return "dogQ"
 
-    def pause(self, message: Message.Message):
+    def pause(self, message: kdancybot.Message.Message):
         if not self.paused and (
             message.user == message.channel or int(message.tags.get("mod"))
         ):

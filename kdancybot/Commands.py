@@ -1,20 +1,22 @@
-from Utils import *
+from kdancybot.Utils import *
+import kdancybot.api.osuAPI
+from kdancybot.Message import Message
+
 import re
 from rosu_pp_py import Beatmap, Calculator
 import json
-import api.osuv2ApiWrapper
-from Message import Message
 from datetime import datetime, timedelta
+import logging
+
 
 ### Methods working with osu!api, to be cropped and moved to Utils
 
 
 class Commands:
     def __init__(self, config):
-        self.osu = osuv2ApiWrapper(config)
+        self.osu = kdancybot.api.osuAPI.osuAPIv2(config)
         self.command_cooldown = 5
         self.request_cooldown = 1
-        self.time = datetime.strptime("20/06/2023 18:16:00", "%d/%m/%Y %H:%M:%S")
         self.users = config["users"]
         self.cooldowns = dict()
         for user in self.users.keys():
@@ -75,13 +77,12 @@ class Commands:
             beatmap_attributes["max_combo"] >= score_data["max_combo"] + 10
             or score_data["statistics"]["count_miss"]
         ):
-            message += (
-                " ("
-                + str(int(perf.pp + 0.5))
-                + "pp for "
-                + str(round(acc, 2))
-                + "% FC)"
-            )
+            message += " (" + str(int(perf.pp + 0.5)) + "pp for "
+            if acc == 100:
+                message += "SS)"
+            else:
+                message += str(round(acc, 2)) + "% FC)"
+
         if score_data["beatmap"]["status"] != "ranked":
             message += " if ranked"
         # message = message.replace('"', '\\"')

@@ -1,10 +1,11 @@
-from Token import TwitchToken
-from Message import Message
+from kdancybot.Token import TwitchToken
+from kdancybot.Message import Message
+from kdancybot.Commands import Commands
+from kdancybot.Timer import Timer
+
 import websockets
 import re
 import logging
-from Commands import Commands
-from Timer import Timer
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import traceback
@@ -86,16 +87,18 @@ class TwitchChatHandler:
         # await asyncio.gather(
         #     self.handle_requests(ws, message), self.handle_commands(ws, message)
         # )
-        await self.handle_requests(ws, message)
-        await self.handle_commands(ws, message)
+        if not self.config["ignore_requests"].get(message.channel):
+            await self.handle_requests(ws, message)
+        if not self.config["ignore_commands"].get(message.channel):
+            await self.handle_commands(ws, message)
 
     async def handle_message(self, ws, message):
         try:
             if message.type == "PRIVMSG":
                 await self.handle_privmsg(ws, message)
         except Exception as e:
-            # logging.warning(traceback.print_exc())
-            logging.warning(e)
+            logging.warning(traceback.print_exc())
+            # logging.warning(e)
 
     async def login(self, ws):
         token = await asyncio.get_event_loop().run_in_executor(

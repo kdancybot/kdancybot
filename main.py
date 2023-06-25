@@ -1,7 +1,7 @@
 import websockets
 import asyncio
 import configparser
-from twitchapi import TwitchChatHandler
+from kdancybot.api.TwitchAPI import TwitchChatHandler
 import logging
 
 configfile = "config.ini"
@@ -19,3 +19,5 @@ if __name__ == "__main__":
         twitch.loop(),
         # debug=True
     )
+
+# Здравствуйте мистер Илья Вопроссофф. Я обращаюсь к вам с официальным предложением подключения бота для осу.

@@ -1,10 +1,10 @@
 import requests
 import logging
 
-from Token import ApiToken, ChatToken
+from kdancybot.Token import ApiToken, ChatToken
 
 
-class osuv2ApiWrapper:
+class osuAPIv2:
     def __init__(self, config):
         super().__init__()
         self.api_token = ApiToken(config)

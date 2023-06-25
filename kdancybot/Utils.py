@@ -1,4 +1,3 @@
-from api.osuv2ApiWrapper import *
 from rosu_pp_py import Beatmap, Calculator
 import json
 
@@ -94,39 +93,6 @@ def get_objects_count(score_data):
     return (
         beatmap["count_circles"] + beatmap["count_spinners"] + beatmap["count_sliders"]
     )
-
-
-def get_pp_message(id, mods):
-    map_data = osuv2ApiWrapper.get_map_data(id)
-
-    mods = 0
-    for mod in score_data["mods"]:
-        mods += int(Mods[mod])
-    calc = Calculator(mode=0, mods=mods, acc=100)
-    calc = build_calculator(score_data)
-    beatmap = Beatmap(bytes=map_data.content)
-
-    curr_perf = calc.performance(beatmap)
-    calc.set_n100(
-        int((score_data["statistics"]["count_100"] * all_objects) / objects_passed)
-    )
-    calc.set_n_misses(0)
-    calc.set_acc(score_data["accuracy"])
-    calc.set_combo(int(beatmap_attributes["max_combo"]))
-    perf = calc.performance(beatmap)
-
-    if score_data["pp"]:
-        message += " " + str(int(score_data["pp"])) + "pp"
-    else:
-        message += " " + str(int(curr_perf.pp + 0.5)) + "pp"
-    if (
-        beatmap_attributes["max_combo"] >= score_data["max_combo"] + 10
-        or score_data["statistics"]["count_miss"]
-    ):
-        message += " (" + str(int(perf.pp + 0.5)) + "pp for FC)"
-    if score_data["beatmap"]["status"] not in ["ranked", "approved"]:
-        message += " if ranked"
-    return message
 
 
 def generate_mods_payload(mods):
