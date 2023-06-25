@@ -66,7 +66,7 @@ class TwitchChatHandler:
 
     async def handle_commands(self, ws, message):
         # logging.warning(message.message[0])
-        if message.message[0] == "!":
+        if message and message.message and message.message[0] == "!":
             command = message.message.split()[0][1:]
             command_func = self.command_templates.get(command)
             if command_func:

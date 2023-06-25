@@ -27,7 +27,7 @@ class Commands:
             score_data["beatmap"]["id"], generate_mods_payload(score_data["mods"])
         ).json()["attributes"]
 
-        message = "https://osu.ppy.sh/b/" + str(score_data["beatmap"]["id"]) + " "
+        message = "osu.ppy.sh/b/" + str(score_data["beatmap"]["id"]) + " "
         message += map_name_from_response(score_data)
         message += " " + str(round(beatmap_attributes["star_rating"], 2)) + "*"
         if len(score_data["mods"]) > 0:
