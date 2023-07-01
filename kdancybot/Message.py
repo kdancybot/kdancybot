@@ -27,6 +27,8 @@ class Message:
         self.params = None
         self.channel = None
         self.message = None
+        self.user_command = None
+        self.arguments = None
 
         try:
             if split[0][0] == "@":
@@ -55,8 +57,9 @@ class Message:
             self.parse_type(self.command)
             self.parse_params(self.command, self.type)
             self.parse_channel(self.params)
-
             self.parse_message(split)
+            self.parse_user_command(self.message)
+
         except Exception as e:
             logger.error(
                 "The Message state at the time of the Exception:\n" + str(self)
@@ -121,6 +124,15 @@ class Message:
             )
         else:
             self.message = ""
+
+    def parse_user_command(self, message):
+        if len(message) > 0:
+            split = [word for word in message.split() if len(word)]
+            if split[0] and split[0][0] == "@":
+                split.pop(0)
+            if split[0] and split[0][0] == "!":
+                self.user_command = split[0][1:]
+                self.arguments = " ".join(split[1:])
 
     def __str__(self):
         return f"""\

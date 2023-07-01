@@ -17,17 +17,21 @@ class Commands:
         self.osu = kdancybot.api.osuAPI.osuAPIv2(config)
         self.command_cooldown = 5
         self.request_cooldown = 1
+        self.config = config
         self.users = config["users"]
         self.cooldowns = dict()
         for user in self.users.keys():
             self.cooldowns[user] = dict()
 
-    def score_info(self, score_data):
+    def score_info(self, score_data, remove_https=False):
         beatmap_attributes = self.osu.get_beatmap_attributes(
             score_data["beatmap"]["id"], generate_mods_payload(score_data["mods"])
         ).json()["attributes"]
 
-        message = "osu.ppy.sh/b/" + str(score_data["beatmap"]["id"]) + " "
+        message = str()
+        if not remove_https:
+            message = "https://"
+        message += "osu.ppy.sh/b/" + str(score_data["beatmap"]["id"]) + " "
         message += map_name_from_response(score_data)
         message += " " + str(round(beatmap_attributes["star_rating"], 2)) + "*"
         if len(score_data["mods"]) > 0:
@@ -70,7 +74,7 @@ class Commands:
         perf = calc.performance(beatmap)
 
         if score_data["pp"]:
-            message += " " + str(int(score_data["pp"])) + "pp"
+            message += " " + str(int(score_data["pp"] + 0.5)) + "pp"
         else:
             message += " " + str(int(curr_perf.pp + 0.5)) + "pp"
         if (
@@ -169,7 +173,7 @@ class Commands:
     def ppdiff(self, request):
         if self.cooldown(request.channel, "ppdiff", self.command_cooldown):
             message = ""
-            query = request.message
+            query = request.arguments
 
             query = re.sub("%..", " ", query).strip()
             user_data, other_data, user, other = self.get_users_from_query(
@@ -185,7 +189,7 @@ class Commands:
     def recent(self, request):
         if self.cooldown(request.channel, "recent", self.command_cooldown):
             message = ""
-            user = request.message
+            user = request.arguments
             if not user or user.isspace():
                 user = self.users.get(request.channel)
 
@@ -197,7 +201,7 @@ class Commands:
 
             user_data = self.osu.get_user_data(user)
             if not user_data.ok:
-                return "Invalid user"
+                return "Who is this Concerned"
 
             recent_score = self.osu.get_last_played(user_data.json()["id"])
             if not recent_score.ok or len(recent_score.json()) == 0:
@@ -208,14 +212,17 @@ class Commands:
                 )
 
             score_data = recent_score.json()[0]
-            message = self.score_info(score_data)
+            message = self.score_info(
+                score_data,
+                remove_https=request.channel in self.config["ignore_requests"].keys(),
+            )
             return message
 
     # TODO: add optional map id to recent whatif
     def whatif(self, request):
         if self.cooldown(request.channel, "whatif", self.command_cooldown):
             try:
-                query = request.message
+                query = request.arguments
                 if not query:
                     return "Usage: !whatif [pp value] [count]"
 
@@ -264,7 +271,7 @@ class Commands:
 
     def recentbest(self, request):
         if self.cooldown(request.channel, "recentbest", self.command_cooldown):
-            query = request.message
+            query = request.arguments
             if not query or query.isspace():
                 query = self.users.get(request.channel)
 
@@ -288,12 +295,15 @@ class Commands:
             ][0]
 
             message = "Latest top score #" + str(index) + " for " + username + ": "
-            message += self.score_info(score_data)
+            message += self.score_info(
+                score_data,
+                remove_https=(request.channel in self.config["ignore_requests"].keys()),
+            )
             return message
 
     def todaybest(self, request):
         if self.cooldown(request.channel, "todaybest", self.command_cooldown):
-            query = request.message
+            query = request.arguments
             if not query:
                 query = self.users.get(request.channel)
             message = ""
@@ -326,13 +336,16 @@ class Commands:
             score_data = recent_plays[place - 1]
 
             message += "Today's score #" + str(place) + " for " + username + ": "
-            message += self.score_info(score_data)
+            message += self.score_info(
+                score_data,
+                remove_https=(request.channel in self.config["ignore_requests"].keys()),
+            )
             return message
 
     def ppcounter(self, request):
         return "not implenented PEEPEES"
 
-        query = request.message
+        query = request.arguments
         if not query:
             return "usage: !pp [map id | recent] [mods]"
         query = " ".join([x.strip() for x in query.split(" ") if x.strip()])

@@ -52,7 +52,7 @@ class TwitchChatHandler:
             "pause": self.timer.pause,
             "resume": self.timer.resume,
         }
-        self.executor = ThreadPoolExecutor()
+        self.executor = ThreadPoolExecutor(10)
 
     async def handle_requests(self, ws, message):
         if message.user.lower() not in self.ignored_users:
@@ -64,19 +64,19 @@ class TwitchChatHandler:
                 if ret:
                     await ws.send("PRIVMSG #{} :{}".format(message.channel, ret))
 
-    async def handle_commands(self, ws, message):
+    async def handle_commands(self, ws, message: Message):
         # logging.warning(message.message[0])
         if message and message.message and message.message[0] == "!":
-            command = message.message.split()[0][1:]
-            command_func = self.command_templates.get(command)
+            # command = message.message.split()[0][1:]
+            command_func = self.command_templates.get(message.user_command)
             if command_func:
-                message.message = " ".join(
-                    [
-                        x.strip().lower()
-                        for x in message.message.split(" ")[1:]
-                        if x.strip()
-                    ]
-                )
+                # message.message = " ".join(
+                #     [
+                #         x.strip().lower()
+                #         for x in message.message.split(" ")[1:]
+                #         if x.strip()
+                #     ]
+                # )
                 ret = await asyncio.get_event_loop().run_in_executor(
                     self.executor, command_func, message
                 )
