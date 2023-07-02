@@ -55,7 +55,9 @@ class osuAPIv2:
         return response
 
     def get_last_played(self, user):
-        endpoint = f"{Template.users}{str(user)}/scores/recent?limit=1&include_fails=1"
+        endpoint = (
+            f"{Template.users}{str(user)}/scores/recent?limit=100&include_fails=1"
+        )
         response = self.get_request(endpoint, headers=self.api_headers())
         return response
 

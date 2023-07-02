@@ -66,13 +66,18 @@ def build_calculator(score_data):
     mods = 0
     for mod in score_data["mods"]:
         mods += int(Mods[mod])
+    stats = score_data["statistics"]
     calc = Calculator(
         mode=0,
         mods=mods,
-        n300=score_data["statistics"]["count_300"],
-        n100=score_data["statistics"]["count_100"],
-        n50=score_data["statistics"]["count_50"],
-        n_misses=score_data["statistics"]["count_miss"],
+        n300=stats["count_300"],
+        n100=stats["count_100"],
+        n50=stats["count_50"],
+        n_misses=stats["count_miss"],
+        passed_objects=stats["count_300"]
+        + stats["count_100"]
+        + stats["count_50"]
+        + stats["count_miss"],
         combo=score_data["max_combo"],
     )
     return calc
@@ -102,3 +107,11 @@ def generate_mods_payload(mods):
     if len(payload):
         payload = payload[:-1]
     return payload
+
+
+def ordinal(n: int):
+    if 11 <= (n % 100) <= 13:
+        suffix = "th"
+    else:
+        suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
+    return str(n) + suffix

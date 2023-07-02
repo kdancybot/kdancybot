@@ -48,9 +48,7 @@ class TwitchChatHandler:
             "todaybest": self.commands.todaybest,
             "ppdiff": self.commands.ppdiff,
             "whatif": self.commands.whatif,
-            "time": self.timer.time,
-            "pause": self.timer.pause,
-            "resume": self.timer.resume,
+            "top": self.commands.top,
         }
         self.executor = ThreadPoolExecutor(10)
 
@@ -67,16 +65,8 @@ class TwitchChatHandler:
     async def handle_commands(self, ws, message: Message):
         # logging.warning(message.message[0])
         if message and message.message and message.message[0] == "!":
-            # command = message.message.split()[0][1:]
             command_func = self.command_templates.get(message.user_command)
             if command_func:
-                # message.message = " ".join(
-                #     [
-                #         x.strip().lower()
-                #         for x in message.message.split(" ")[1:]
-                #         if x.strip()
-                #     ]
-                # )
                 ret = await asyncio.get_event_loop().run_in_executor(
                     self.executor, command_func, message
                 )

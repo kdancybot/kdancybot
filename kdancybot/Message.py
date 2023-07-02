@@ -132,7 +132,7 @@ class Message:
                 split.pop(0)
             if split and split[0] and split[0][0] == "!":
                 self.user_command = split[0][1:]
-                self.arguments = " ".join(split[1:])
+                self.arguments = split[1:]
 
     def __str__(self):
         return f"""\
