@@ -127,7 +127,7 @@ class Message:
 
     def parse_user_command(self, message):
         if len(message) > 0:
-            split = [word for word in message.split() if len(word)]
+            split = [word.strip() for word in message.split() if len(word)]
             if split and split[0] and split[0][0] == "@":
                 split.pop(0)
             if split and split[0] and split[0][0] == "!":

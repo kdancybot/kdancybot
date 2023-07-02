@@ -64,7 +64,7 @@ class TwitchChatHandler:
 
     async def handle_commands(self, ws, message: Message):
         # logging.warning(message.message[0])
-        if message and message.message and message.message[0] == "!":
+        if message and message.user_command:
             command_func = self.command_templates.get(message.user_command)
             if command_func:
                 ret = await asyncio.get_event_loop().run_in_executor(
