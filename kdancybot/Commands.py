@@ -16,13 +16,11 @@ import logging
 class Commands:
     def __init__(self, config):
         self.osu = kdancybot.api.osuAPI.osuAPIv2(config)
-        self.command_cooldown = 5
-        self.request_cooldown = 1
         self.config = config
         self.users = config["users"]
-        self.cooldowns = dict()
-        for user in self.users.keys():
-            self.cooldowns[user] = dict()
+        # self.cooldowns = dict()
+        # for user in self.users.keys():
+        #     self.cooldowns[user] = dict()
 
     def score_info(self, score_data, remove_https=False):
         beatmap_attributes = self.osu.get_beatmap_attributes(
@@ -166,226 +164,220 @@ class Commands:
         return f"{user_data['username']} needs to get a {int(pp_value + .5)}pp play to overtake {other_data['username']}"
 
     ###
-    def cooldown(self, channel, method, cd):
-        if not self.cooldowns[channel].get(method):
-            self.cooldowns[channel][method] = datetime.now()
-        logging.debug(channel, method)
-        if self.cooldowns[channel][method] > datetime.now():
-            return False
-        self.cooldowns[channel][method] = datetime.now() + timedelta(seconds=cd)
-        return True
+    # def cooldown(self, channel, method, cd):
+    #     if not self.cooldowns[channel].get(method):
+    #         self.cooldowns[channel][method] = datetime.now()
+    #     logging.debug(channel, method)
+    #     if self.cooldowns[channel][method] > datetime.now():
+    #         return False
+    #     self.cooldowns[channel][method] = datetime.now() + timedelta(seconds=cd)
+    #     return True
 
     def ppdiff(self, request):
-        if self.cooldown(request.channel, "ppdiff", self.command_cooldown):
-            message = ""
-            query = request.arguments
+        message = ""
+        query = request.arguments
 
-            user_data, other_data, user, other = self.get_users_from_query(
-                query, request
-            )
+        user_data, other_data, user, other = self.get_users_from_query(query, request)
 
-            if not (user_data and other_data and (user_data.ok and other_data.ok)):
-                return "Could not find such user(s) NOOOO"
+        if not (user_data and other_data and (user_data.ok and other_data.ok)):
+            return "Could not find such user(s) NOOOO"
 
-            message = self.prepare_ppdiff_message(user_data.json(), other_data.json())
-            return message
+        message = self.prepare_ppdiff_message(user_data.json(), other_data.json())
+        return message
 
     def recent(self, request):
-        if self.cooldown(request.channel, "recent", self.command_cooldown):
-            args = Parsing.Top(request.arguments)
-            if not args.get("username"):
-                args["username"] = self.users.get(request.channel)
-            if not args.get("index"):
-                args["index"] = 1
+        args = Parsing.Top(request.arguments)
+        if not args.get("username"):
+            args["username"] = self.users.get(request.channel)
+        if not args.get("index"):
+            args["index"] = 1
 
-            message = ""
+        message = ""
 
-            # user = user.replace('%20', ' ')
-            user_data = self.osu.get_user_data(args["username"])
-            if not user_data.ok:
-                return "Who is this Concerned"
+        # user = user.replace('%20', ' ')
+        user_data = self.osu.get_user_data(args["username"])
+        if not user_data.ok:
+            return "Who is this Concerned"
 
-            recent_score = self.osu.get_last_played(user_data.json()["id"])
-            if not recent_score.ok or len(recent_score.json()) == 0:
-                return (
-                    "No scores for "
-                    + username_from_response(user_data.json())
-                    + " in last 24 hours"
-                )
-            elif len(recent_score.json()) <= args["index"]:
-                message += "Requested place unavailable, falling back to most recent. "
-                args["index"] = 1
-
-            score_data = recent_score.json()[args["index"] - 1]
-            message += self.score_info(
-                score_data,
-                remove_https=request.channel in self.config["ignore_requests"].keys(),
+        recent_score = self.osu.get_last_played(user_data.json()["id"])
+        if not recent_score.ok or len(recent_score.json()) == 0:
+            return (
+                "No scores for "
+                + username_from_response(user_data.json())
+                + " in last 24 hours"
             )
-            return message
+        elif len(recent_score.json()) <= args["index"]:
+            message += "Requested place unavailable, falling back to most recent. "
+            args["index"] = 1
+
+        score_data = recent_score.json()[args["index"] - 1]
+        message += self.score_info(
+            score_data,
+            remove_https=request.channel in self.config["ignore_requests"].keys(),
+        )
+        return message
 
     def top(self, request):
-        if self.cooldown(request.channel, "top", self.command_cooldown):
-            args = Parsing.Top(request.arguments)
-            if not args.get("username"):
-                args["username"] = self.users.get(request.channel)
-            if not args.get("index"):
-                args["index"] = 1
+        args = Parsing.Top(request.arguments)
+        if not args.get("username"):
+            args["username"] = self.users.get(request.channel)
+        if not args.get("index"):
+            args["index"] = 1
 
-            message = ""
-            user_data = self.osu.get_user_data(args["username"])
-            if not user_data.ok:
-                return "Who is this Concerned"
-            user_data = user_data.json()
-            username = username_from_response(user_data)
-            full_pp = user_data["statistics"]["pp"]
-            top100 = self.osu.get_top_100(user_data["id"]).json()
-            if len(top100) == 0:
-                return "No scores for " + username + " in last 24 hours Sadge"
-            if len(top100) < args["index"] and args["index"] != 1:
-                message += "Requested place unavailable, falling back to #1. "
-                args["index"] = 1
-            score_data = top100[args["index"] - 1]
+        message = ""
+        user_data = self.osu.get_user_data(args["username"])
+        if not user_data.ok:
+            return "Who is this Concerned"
+        user_data = user_data.json()
+        username = username_from_response(user_data)
+        full_pp = user_data["statistics"]["pp"]
+        top100 = self.osu.get_top_100(user_data["id"]).json()
+        if len(top100) == 0:
+            return "No scores for " + username + " in last 24 hours Sadge"
+        if len(top100) < args["index"] and args["index"] != 1:
+            message += "Requested place unavailable, falling back to #1. "
+            args["index"] = 1
+        score_data = top100[args["index"] - 1]
 
-            message += ordinal(args["index"]) + " top score for " + username + ": "
-            message += self.score_info(
-                score_data,
-                remove_https=(request.channel in self.config["ignore_requests"].keys()),
-            )
-            return message
+        message += ordinal(args["index"]) + " top score for " + username + ": "
+        message += self.score_info(
+            score_data,
+            remove_https=(request.channel in self.config["ignore_requests"].keys()),
+        )
+        return message
 
     # TODO: add optional map id to recent whatif
     def whatif(self, request):
-        if self.cooldown(request.channel, "whatif", self.command_cooldown):
-            try:
-                tokens = request.arguments
-                if len(tokens) == 0:
-                    return "Usage: !whatif [pp value] [count]"
-                if len(tokens) == 1:
-                    count = 1
-                else:
-                    count = int(tokens[1])
-                if float(tokens[0]) > 2000 or count > 100:
-                    return "really?"
-                pps = [float(tokens[0]) for i in range(count)]
-            except:
-                return "Invalid arguments Tssk"
+        try:
+            tokens = request.arguments
+            if len(tokens) == 0:
+                return "Usage: !whatif [pp value] [count]"
+            if len(tokens) == 1:
+                count = 1
+            else:
+                count = int(tokens[1])
+            if float(tokens[0]) > 2000 or count > 100:
+                return "really?"
+            pps = [float(tokens[0]) for i in range(count)]
+        except:
+            return "Invalid arguments Tssk"
 
-            user = self.users.get(request.channel)
-            user_data = self.osu.get_user_data(user)
-            user_data = user_data.json()
-            message = username_from_response(user_data) + " needs to get a "
-            full_pp = user_data["statistics"]["pp"]
-            top100 = self.osu.get_top_100(user).json()
-            pp_values = [score["pp"] for score in top100]
-            weighted = [0.95**i * pp_values[i] for i in range(len(pp_values))]
-            wsum = sum(weighted)
-            bonus_pp = full_pp - wsum
+        user = self.users.get(request.channel)
+        user_data = self.osu.get_user_data(user)
+        user_data = user_data.json()
+        message = username_from_response(user_data) + " needs to get a "
+        full_pp = user_data["statistics"]["pp"]
+        top100 = self.osu.get_top_100(user).json()
+        pp_values = [score["pp"] for score in top100]
+        weighted = [0.95**i * pp_values[i] for i in range(len(pp_values))]
+        wsum = sum(weighted)
+        bonus_pp = full_pp - wsum
 
-            pp_values.extend(pps)
-            pp_values.sort(reverse=True)
-            pp_values = pp_values[:100]
-            weighted = [0.95**i * pp_values[i] for i in range(len(pp_values))]
-            wsum = sum(weighted)
-            new_pp = wsum + bonus_pp
+        pp_values.extend(pps)
+        pp_values.sort(reverse=True)
+        pp_values = pp_values[:100]
+        weighted = [0.95**i * pp_values[i] for i in range(len(pp_values))]
+        wsum = sum(weighted)
+        new_pp = wsum + bonus_pp
 
-            message = "Prayge If " + user_data["username"] + " gets " + str(count) + " "
-            message += (
-                str(tokens[0])
-                + "pp score(s), he would be at "
-                + str(round(new_pp, 1))
-                + "pp (+"
-            )
-            message += str(round(new_pp - full_pp, 1)) + "pp)"
-            return message
+        message = "Prayge If " + user_data["username"] + " gets " + str(count) + " "
+        message += (
+            str(tokens[0])
+            + "pp score(s), he would be at "
+            + str(round(new_pp, 1))
+            + "pp (+"
+        )
+        message += str(round(new_pp - full_pp, 1)) + "pp)"
+        return message
         # return "Not implemented yet self.users.get(request.channel)Business"
 
     def recentbest(self, request):
-        if self.cooldown(request.channel, "recentbest", self.command_cooldown):
-            args = Parsing.Top(request.arguments)
-            if not args.get("username"):
-                args["username"] = self.users.get(request.channel)
-            if not args.get("index"):
-                args["index"] = 1
+        args = Parsing.Top(request.arguments)
+        if not args.get("username"):
+            args["username"] = self.users.get(request.channel)
+        if not args.get("index"):
+            args["index"] = 1
 
-            message = ""
-            user_data = self.osu.get_user_data(args["username"])
-            if not user_data.ok:
-                return "Unknown user MyHonestReaction"
+        message = ""
+        user_data = self.osu.get_user_data(args["username"])
+        if not user_data.ok:
+            return "Unknown user MyHonestReaction"
 
-            user_data = user_data.json()
-            username = username_from_response(user_data)
-            full_pp = user_data["statistics"]["pp"]
-            top100 = self.osu.get_top_100(user_data["id"]).json()
+        user_data = user_data.json()
+        username = username_from_response(user_data)
+        full_pp = user_data["statistics"]["pp"]
+        top100 = self.osu.get_top_100(user_data["id"]).json()
 
-            if len(top100) == 0:
-                return "Bro's profile is wiped Sadge"
-            elif len(top100) < args["index"] and args["index"] != 1:
-                # message += "Requested place unavailable, falling back to most recent top 100 score. "
-                args["index"] = 1
+        if len(top100) == 0:
+            return "Bro's profile is wiped Sadge"
+        elif len(top100) < args["index"] and args["index"] != 1:
+            # message += "Requested place unavailable, falling back to most recent top 100 score. "
+            args["index"] = 1
 
-            ordered = sorted(
-                top100,
-                key=lambda score: score["created_at"],
-                reverse=True,
-            )
-            score_data = ordered[args["index"] - 1]
-            index = next(
-                i + 1
-                for i in range(len(top100))
-                if top100[i]["beatmap"]["id"] == score_data["beatmap"]["id"]
-            )
+        ordered = sorted(
+            top100,
+            key=lambda score: score["created_at"],
+            reverse=True,
+        )
+        score_data = ordered[args["index"] - 1]
+        index = next(
+            i + 1
+            for i in range(len(top100))
+            if top100[i]["beatmap"]["id"] == score_data["beatmap"]["id"]
+        )
 
-            message += "Latest top score #" + str(index) + " for " + username + ": "
-            message += self.score_info(
-                score_data,
-                remove_https=(request.channel in self.config["ignore_requests"].keys()),
-            )
-            return message
+        message += "Latest top score #" + str(index) + " for " + username + ": "
+        message += self.score_info(
+            score_data,
+            remove_https=(request.channel in self.config["ignore_requests"].keys()),
+        )
+        return message
 
     def todaybest(self, request):
-        if self.cooldown(request.channel, "todaybest", self.command_cooldown):
-            args = Parsing.Top(request.arguments)
-            if not args.get("username"):
-                args["username"] = self.users.get(request.channel)
-            if not args.get("index"):
-                args["index"] = 1
+        args = Parsing.Top(request.arguments)
+        if not args.get("username"):
+            args["username"] = self.users.get(request.channel)
+        if not args.get("index"):
+            args["index"] = 1
 
-            # query = request.arguments
-            # if not query:
-            #     query = self.users.get(request.channel)
-            # message = ""
-            # place = 1
-            # query = re.sub("%..", " ", query)
-            # tokens = [x.strip() for x in str(query).split(" ") if x.strip()]
-            # if tokens[-1].isnumeric() and len(tokens[-1]) < 3:
-            #     place = int(tokens.pop())
-            #     if place <= 0:
-            #         place = 1
-            # query = " ".join(tokens)
-            # if len(query) == 0:
-            #     query = self.users.get(request.channel)
-            message = ""
+        # query = request.arguments
+        # if not query:
+        #     query = self.users.get(request.channel)
+        # message = ""
+        # place = 1
+        # query = re.sub("%..", " ", query)
+        # tokens = [x.strip() for x in str(query).split(" ") if x.strip()]
+        # if tokens[-1].isnumeric() and len(tokens[-1]) < 3:
+        #     place = int(tokens.pop())
+        #     if place <= 0:
+        #         place = 1
+        # query = " ".join(tokens)
+        # if len(query) == 0:
+        #     query = self.users.get(request.channel)
+        message = ""
 
-            user_data = self.osu.get_user_data(args["username"])
-            if not user_data.ok:
-                return "Who is this Concerned"
-            user_data = user_data.json()
-            username = username_from_response(user_data)
-            full_pp = user_data["statistics"]["pp"]
-            recent_plays = sorted(
-                self.osu.get_today_scores(user_data["id"]).json(),
-                key=lambda score: float(0 if score["pp"] is None else score["pp"]),
-                reverse=True,
+        user_data = self.osu.get_user_data(args["username"])
+        if not user_data.ok:
+            return "Who is this Concerned"
+        user_data = user_data.json()
+        username = username_from_response(user_data)
+        full_pp = user_data["statistics"]["pp"]
+        recent_plays = sorted(
+            self.osu.get_today_scores(user_data["id"]).json(),
+            key=lambda score: float(0 if score["pp"] is None else score["pp"]),
+            reverse=True,
+        )
+        if len(recent_plays) == 0:
+            return "No scores for " + username + " in last 24 hours Sadge"
+        if len(recent_plays) < args["index"] and args["index"] != 1:
+            message += (
+                "Requested place unavailable, falling back to best score of the day. "
             )
-            if len(recent_plays) == 0:
-                return "No scores for " + username + " in last 24 hours Sadge"
-            if len(recent_plays) < args["index"] and args["index"] != 1:
-                message += "Requested place unavailable, falling back to best score of the day. "
-                args["index"] = 1
-            score_data = recent_plays[args["index"] - 1]
+            args["index"] = 1
+        score_data = recent_plays[args["index"] - 1]
 
-            message += f"Today's score #{args['index']} for {username}: {self.score_info(score_data, remove_https=(request.channel in self.config['ignore_requests'].keys()))}"
-            return message
+        message += f"Today's score #{args['index']} for {username}: {self.score_info(score_data, remove_https=(request.channel in self.config['ignore_requests'].keys()))}"
+        return message
 
     def ppcounter(self, request):
         return "not implenented PEEPEES"
@@ -402,17 +394,16 @@ class Commands:
             mods = str(query[0]["beatmap"]["id"])
 
     def req(self, request: Message, map_id):
-        if self.cooldown(request.channel, "req", self.request_cooldown):
-            # return 'ChiconyBusiness Send map link to osu!pm'
-            BEATMAP_URL = "https://osu.ppy.sh/b/"
-            beatmap = self.osu.get_beatmap(map_id)
-            if beatmap.ok:
-                map_name = map_name_from_response(beatmap.json())
-                message = f"{request.user} | [{BEATMAP_URL}{map_id} {map_name}]"
-                response = self.osu.send_pm(self.users.get(request.channel), message)
-                return f"{request.user} sent request: {map_name}"
-            else:
-                return "Seems like beatmap does not exist, are you sure dogQ"
+        # return 'ChiconyBusiness Send map link to osu!pm'
+        BEATMAP_URL = "https://osu.ppy.sh/b/"
+        beatmap = self.osu.get_beatmap(map_id)
+        if beatmap.ok:
+            map_name = map_name_from_response(beatmap.json())
+            message = f"{request.user} | [{BEATMAP_URL}{map_id} {map_name}]"
+            response = self.osu.send_pm(self.users.get(request.channel), message)
+            return f"{request.user} sent request: {map_name}"
+        else:
+            return "Seems like beatmap does not exist, are you sure dogQ"
 
     # def rpp(self, request):
     #     query = request.args.get("query")

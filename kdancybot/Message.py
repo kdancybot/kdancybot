@@ -131,7 +131,7 @@ class Message:
             if split and split[0] and split[0][0] == "@":
                 split.pop(0)
             if split and split[0] and split[0][0] == "!":
-                self.user_command = split[0][1:]
+                self.user_command = split[0][1:].lower()
                 self.arguments = split[1:]
 
     def __str__(self):
@@ -143,4 +143,6 @@ full_message: {self.full_message}
         type: {self.type}
         params: {self.params}
         channel: {self.channel}
-    message: {self.message}"""
+    message: {self.message}
+    user_command: {self.user_command}
+    arguments: {self.arguments}"""

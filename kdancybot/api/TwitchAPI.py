@@ -2,6 +2,7 @@ from kdancybot.Token import TwitchToken
 from kdancybot.Message import Message
 from kdancybot.Commands import Commands
 from kdancybot.Timer import Timer
+from kdancybot.Cooldown import Cooldown
 
 import websockets
 import re
@@ -35,7 +36,6 @@ class TwitchChatHandler:
         self.config = config
         self.token = TwitchToken(config)
         self.commands = Commands(config)
-        self.timer = Timer(4, 26, 0)
         self.url = "ws://irc-ws.chat.twitch.tv:80"
         self.username = "kdancybot"
         self.ignored_users = [self.username, "nightbot", "streamelements"]
@@ -50,12 +50,23 @@ class TwitchChatHandler:
             "whatif": self.commands.whatif,
             "top": self.commands.top,
         }
-        self.executor = ThreadPoolExecutor(10)
+
+        self.cd = Cooldown(self.command_templates.keys(), config["users"].keys())
+        self.executor = ThreadPoolExecutor(20)
+
+    # def cooldown(self, method, channel, cd):
+    #     if not self.cooldowns[method].get(channel):
+    #         self.cooldowns[method][channel] = datetime.now()
+    #     logging.debug(channel, method)
+    #     if self.cooldowns[method][channel] > datetime.now():
+    #         return False
+    #     self.cooldowns[method][channel] = datetime.now() + timedelta(seconds=cd)
+    #     return True
 
     async def handle_requests(self, ws, message):
         if message.user.lower() not in self.ignored_users:
             map_id = parse_beatmap_link(message.message)
-            if map_id:
+            if map_id and self.cd.cd("request", message.channel):
                 ret = await asyncio.get_event_loop().run_in_executor(
                     self.executor, self.commands.req, message, map_id
                 )
@@ -66,7 +77,7 @@ class TwitchChatHandler:
         # logging.warning(message.message[0])
         if message and message.user_command:
             command_func = self.command_templates.get(message.user_command)
-            if command_func:
+            if command_func and self.cd.cd(message.user_command, message.channel):
                 ret = await asyncio.get_event_loop().run_in_executor(
                     self.executor, command_func, message
                 )
@@ -114,5 +125,10 @@ class TwitchChatHandler:
                     msg = await ws.recv()
                     message = Message(msg)
                     await self.handle_message(ws, message)
-            except websockets.exceptions.ConnectionClosed:
+            except websockets.exceptions.ConnectionClosed as e:
+                logging.critical(traceback.format_exc())
+                continue
+            except Exception as e:
+                logging.critical(traceback.format_exc())
+                await asyncio.sleep(7.27)
                 continue
