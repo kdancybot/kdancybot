@@ -1,4 +1,5 @@
 from rosu_pp_py import Beatmap, Calculator
+from datetime import datetime, timedelta, UTC
 import json
 
 PP_RECORD = 1371
@@ -20,9 +21,8 @@ Mods = {
 }
 
 
-def username_from_response(response, username=""):
-    if str(username).lower() not in ["leva_russian", "peko_russian"]:
-        username = response["username"]
+def username_from_response(response):
+    username = response["username"]
     return username + " (#" + str(response["statistics"]["global_rank"]) + ")"
 
 
@@ -74,10 +74,7 @@ def build_calculator(score_data):
         n100=stats["count_100"],
         n50=stats["count_50"],
         n_misses=stats["count_miss"],
-        passed_objects=stats["count_300"]
-        + stats["count_100"]
-        + stats["count_50"]
-        + stats["count_miss"],
+        passed_objects=get_passed_objects(score_data),
         combo=score_data["max_combo"],
     )
     return calc
@@ -115,3 +112,26 @@ def ordinal(n: int):
     else:
         suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
     return str(n) + suffix
+
+
+def score_age(date: str) -> str | None:
+    magnitudes = ["y", "mth", "d", "h", "min", "s"]
+    diff = datetime.now(UTC) - datetime.strptime(date, "%Y-%m-%dT%H:%M:%S%z")
+    orders = [
+        diff.days // 365,
+        diff.days // 30,
+        diff.days,
+        diff.seconds // 3600,
+        diff.seconds // 60,
+        diff.seconds,
+    ]
+    for i in range(len(orders)):
+        if orders[i] > 0:
+            return f"{orders[i]}{magnitudes[i]}"
+    return ""
+
+
+def generate_mods_string(mods) -> str:
+    return f" +{''.join(mods)}" if len(mods) else ""
+
+# def generate_

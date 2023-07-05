@@ -18,50 +18,18 @@ class Commands:
         self.osu = kdancybot.api.osuAPI.osuAPIv2(config)
         self.config = config
         self.users = config["users"]
-        # self.cooldowns = dict()
-        # for user in self.users.keys():
-        #     self.cooldowns[user] = dict()
 
     def score_info(self, score_data, remove_https=False):
         beatmap_attributes = self.osu.get_beatmap_attributes(
             score_data["beatmap"]["id"], generate_mods_payload(score_data["mods"])
         ).json()["attributes"]
 
-        message = str()
-        if not remove_https:
-            message = "https://"
-        message += "osu.ppy.sh/b/" + str(score_data["beatmap"]["id"]) + " "
-        message += map_name_from_response(score_data)
-        message += " " + str(round(beatmap_attributes["star_rating"], 2)) + "*"
-        if len(score_data["mods"]) > 0:
-            message += " +"
-            for mod in score_data["mods"]:
-                message += mod
-
-        message += " " + str(round(score_data["accuracy"] * 100, 2)) + "%"
-        if beatmap_attributes["max_combo"] == score_data["max_combo"]:
-            message += " FC"
-        else:
-            message += (
-                " "
-                + str(score_data["max_combo"])
-                + "/"
-                + str(beatmap_attributes["max_combo"])
-                + "x"
-            )
-        if score_data["statistics"]["count_miss"]:
-            message += " " + str(score_data["statistics"]["count_miss"]) + "xMiss"
-
         map_data = self.osu.get_map_data(str(score_data["beatmap"]["id"]))
         objects_passed = get_passed_objects(score_data)
         all_objects = get_objects_count(score_data)
-        n300 = int(
-            (score_data["statistics"]["count_300"] * all_objects) / objects_passed
-        )
-        n100 = int(
-            (score_data["statistics"]["count_100"] * all_objects) / objects_passed
-        )
-        n50 = int((score_data["statistics"]["count_50"] * all_objects) / objects_passed)
+        n300 = (score_data["statistics"]["count_300"] * all_objects) // objects_passed
+        n100 = (score_data["statistics"]["count_100"] * all_objects) // objects_passed
+        n50 = (score_data["statistics"]["count_50"] * all_objects) // objects_passed
         acc = 100 * ((all_objects - n100 - n50) + n100 / 3 + n50 / 6) / all_objects
 
         calc = build_calculator(score_data)
@@ -74,27 +42,31 @@ class Commands:
         calc.set_n50(n50)
         calc.set_n_misses(0)
         # calc.set_acc(score_data['accuracy'])
-        calc.set_combo(int(beatmap_attributes["max_combo"]))
+        calc.set_combo(beatmap_attributes["max_combo"])
         perf = calc.performance(beatmap)
 
-        if score_data["pp"]:
-            message += " " + str(int(score_data["pp"] + 0.5)) + "pp"
-        else:
-            message += " " + str(int(curr_perf.pp + 0.5)) + "pp"
-        if (
-            beatmap_attributes["max_combo"] >= score_data["max_combo"] + 10
-            or score_data["statistics"]["count_miss"]
-        ):
-            message += " (" + str(int(perf.pp + 0.5)) + "pp for "
-            if acc == 100:
-                message += "SS)"
-            else:
-                message += str(round(acc, 2)) + "% FC)"
-
-        if score_data["beatmap"]["status"] != "ranked":
-            message += " if ranked"
-        # message = message.replace('"', '\\"')
-        message = message.replace('"', "")
+        message_parts = [
+            f"{'https://' if not remove_https else ''}osu.ppy.sh/b/{score_data['beatmap']['id']}",                      # map link
+            map_name_from_response(score_data),                                 # map name
+            f"{round(beatmap_attributes['star_rating'], 2)}*",                  # star rating
+            generate_mods_string(score_data["mods"]),                           # mods | None
+            f"{round(score_data['accuracy'] * 100, 2)}%",                       # accuracy
+            f"{score_data['max_combo']}/{beatmap_attributes['max_combo']}x"     # combo or "FC"
+                if beatmap_attributes["max_combo"] != score_data["max_combo"]
+            else "FC",
+            f"{score_data['statistics']['count_miss']}xMiss"                    # misses | None
+                if score_data["statistics"]["count_miss"]
+            else "",
+            f"{int((score_data['pp'] if score_data['pp'] else curr_perf.pp) + .5)}pp",
+            f"({int(perf.pp + 0.5)}pp for {f'{round(acc, 2)}% FC' if acc != 100 else 'SS'})" 
+                if beatmap_attributes["max_combo"] >= score_data["max_combo"] + 10
+                    or score_data["statistics"]["count_miss"]
+            else "",
+            "if ranked" if score_data["beatmap"]["status"] != "ranked" else "",
+            f"{score_age(score_data['created_at'])} ago"
+        ]
+        # message = message.replace('"', "")
+        message = " ".join([part for part in message_parts if part])
         return message
 
     # def get_user_pair(lhs: str, rhs: str):
@@ -186,7 +158,7 @@ class Commands:
         return message
 
     def recent(self, request):
-        args = Parsing.Top(request.arguments)
+        args = Parsing.Recent(request.arguments)
         if not args.get("username"):
             args["username"] = self.users.get(request.channel)
         if not args.get("index"):
@@ -199,7 +171,12 @@ class Commands:
         if not user_data.ok:
             return "Who is this Concerned"
 
-        recent_score = self.osu.get_last_played(user_data.json()["id"])
+        scores_func = (
+            self.osu.get_today_scores
+            if args.get("pass-only")
+            else self.osu.get_last_played
+        )
+        recent_score = scores_func(user_data.json()["id"])
         if not recent_score.ok or len(recent_score.json()) == 0:
             return (
                 "No scores for "

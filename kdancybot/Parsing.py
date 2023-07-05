@@ -15,3 +15,15 @@ class Parsing:
                 arguments["index"] = Parsing.Index.Value(tokens.pop(0))
             arguments["username"] = " ".join([token for token in tokens if token])
         return arguments
+
+    def Recent(tokens: list):
+        arguments = dict()
+
+        # set submitted only flag
+        arguments["pass-only"] = False
+        while "--pass-only" in tokens:
+            arguments["pass-only"] = True
+            tokens.remove("--pass-only")
+
+        arguments.update(Parsing.Top(tokens))
+        return arguments

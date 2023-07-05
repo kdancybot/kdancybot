@@ -69,7 +69,7 @@ class osuAPIv2:
 
     def get_today_scores(self, user):
         endpoint = (
-            f"{Template.users}{str(user)}/scores/recent?limit=1000&include_fails=0"
+            f"{Template.users}{str(user)}/scores/recent?limit=100&include_fails=0"
         )
         response = self.get_request(endpoint, headers=self.api_headers())
         return response
