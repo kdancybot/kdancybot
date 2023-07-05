@@ -114,7 +114,7 @@ def ordinal(n: int):
     return str(n) + suffix
 
 
-def score_age(date: str) -> str | None:
+def score_age(date: str) -> str:
     magnitudes = ["y", "mth", "d", "h", "min", "s"]
     diff = datetime.now(timezone.utc) - datetime.strptime(date, "%Y-%m-%dT%H:%M:%S%z")
     orders = [
