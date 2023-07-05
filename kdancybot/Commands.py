@@ -166,7 +166,6 @@ class Commands:
 
         message = ""
 
-        # user = user.replace('%20', ' ')
         user_data = self.osu.get_user_data(args["username"])
         if not user_data.ok:
             return "Who is this Concerned"
@@ -317,22 +316,7 @@ class Commands:
         if not args.get("index"):
             args["index"] = 1
 
-        # query = request.arguments
-        # if not query:
-        #     query = self.users.get(request.channel)
-        # message = ""
-        # place = 1
-        # query = re.sub("%..", " ", query)
-        # tokens = [x.strip() for x in str(query).split(" ") if x.strip()]
-        # if tokens[-1].isnumeric() and len(tokens[-1]) < 3:
-        #     place = int(tokens.pop())
-        #     if place <= 0:
-        #         place = 1
-        # query = " ".join(tokens)
-        # if len(query) == 0:
-        #     query = self.users.get(request.channel)
         message = ""
-
         user_data = self.osu.get_user_data(args["username"])
         if not user_data.ok:
             return "Who is this Concerned"
@@ -381,27 +365,6 @@ class Commands:
             return f"{request.user} sent request: {map_name}"
         else:
             return "Seems like beatmap does not exist, are you sure dogQ"
-
-    # def rpp(self, request):
-    #     query = request.args.get("query")
-    #     user = request.args.get("user")
-    #     if not query:
-    #         return "RIPBOZO"
-    #     try:
-    #         beatmap = query.split("/")[-1]
-    #         beatmap = re.sub("[^0-9]", "", beatmap)
-    #         beatmap_id = int(beatmap)
-    #     except:
-    #         return "failed to parse beatmap id, are you sure it's correct?"
-
-    #     beatmap = self.osu.get_beatmap(beatmap_id)
-    #     if beatmap.ok:
-    #         map_name = map_name_from_response(beatmap.json())
-    #         message = f"{user} | [{BEATMAP_URL}{beatmap_id} {map_name}]"
-    #         response = self.osu.send_pm(self.users.get(request.channel), message)
-    #         return f"{user} sent request: {map_name}"
-    #     else:
-    #         return "Seems like beatmap does not exist, are you sure dogQ"
 
 
 # regex for commands - '!command_name($| .*)'

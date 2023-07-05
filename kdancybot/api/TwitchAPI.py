@@ -71,7 +71,11 @@ class TwitchChatHandler:
                     self.executor, self.commands.req, message, map_id
                 )
                 if ret:
-                    await ws.send("PRIVMSG #{} :{}".format(message.channel, ret))
+                    logging.warning(msg=message)
+                    await ws.send("@reply-parent-msg-id={} PRIVMSG #{} :{}".format(
+                        message.tags.get('id', 0),
+                        message.channel, 
+                        ret))
 
     async def handle_commands(self, ws, message: Message):
         # logging.warning(message.message[0])
@@ -82,7 +86,10 @@ class TwitchChatHandler:
                     self.executor, command_func, message
                 )
                 if ret:
-                    await ws.send("PRIVMSG #{} :{}".format(message.channel, ret))
+                    await ws.send("@reply-parent-msg-id={} PRIVMSG #{} :{}".format(
+                        message.tags.get('id', 0),
+                        message.channel, 
+                        ret))
 
     async def handle_privmsg(self, ws, message):
         # await asyncio.gather(
