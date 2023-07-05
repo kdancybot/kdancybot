@@ -1,5 +1,5 @@
 from rosu_pp_py import Beatmap, Calculator
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 import json
 
 PP_RECORD = 1371
@@ -116,7 +116,7 @@ def ordinal(n: int):
 
 def score_age(date: str) -> str | None:
     magnitudes = ["y", "mth", "d", "h", "min", "s"]
-    diff = datetime.now(UTC) - datetime.strptime(date, "%Y-%m-%dT%H:%M:%S%z")
+    diff = datetime.now(timezone.utc) - datetime.strptime(date, "%Y-%m-%dT%H:%M:%S%z")
     orders = [
         diff.days // 365,
         diff.days // 30,
