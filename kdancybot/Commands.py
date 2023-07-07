@@ -8,6 +8,7 @@ from rosu_pp_py import Beatmap, Calculator
 import json
 from datetime import datetime, timedelta
 import logging
+import traceback
 
 
 ### Methods working with osu!api, to be cropped and moved to Utils
@@ -224,46 +225,58 @@ class Commands:
 
     # TODO: add optional map id to recent whatif
     def whatif(self, request):
-        try:
-            tokens = request.arguments
-            if len(tokens) == 0:
-                return "Usage: !whatif [pp value] [count]"
-            if len(tokens) == 1:
-                count = 1
-            else:
-                count = int(tokens[1])
-            if float(tokens[0]) > 2000 or count > 100:
-                return "really?"
-            pps = [float(tokens[0]) for i in range(count)]
-        except:
+        args = Parsing.Whatif(request.arguments)
+
+        # try:
+        #     tokens = request.arguments
+        #     if len(tokens) == 0:
+        #         return "Usage: !whatif [pp value] [count]"
+        #     if len(tokens) == 1:
+        #         count = 1
+        #     else:
+        #         count = int(tokens[1])
+        #     if float(tokens[0]) > 2000 or count > 100:
+        #         return "really?"
+        #     pps = [float(tokens[0]) for i in range(count)]
+        # except:
+        if not args.get("pp"):
             return "Invalid arguments Tssk"
 
         user = self.users.get(request.channel)
         user_data = self.osu.get_user_data(user)
         user_data = user_data.json()
-        message = username_from_response(user_data) + " needs to get a "
         full_pp = user_data["statistics"]["pp"]
         top100 = self.osu.get_top_100(user).json()
-        pp_values = [score["pp"] for score in top100]
-        weighted = [0.95**i * pp_values[i] for i in range(len(pp_values))]
+        pp_values = [Map(score["pp"], score['beatmap']["id"]) for score in top100]
+        weighted = [0.95**i * pp_values[i].pp for i in range(len(pp_values))]
         wsum = sum(weighted)
         bonus_pp = full_pp - wsum
+        new_scores = [Map(args["pp"], args['map_id'] - i * 5000000) for i in range(args['count'])]
 
-        pp_values.extend(pps)
-        pp_values.sort(reverse=True)
+        upsert_scores(pp_values, new_scores)
+        pp_values.sort(reverse=True, key=lambda x: x.pp)
         pp_values = pp_values[:100]
-        weighted = [0.95**i * pp_values[i] for i in range(len(pp_values))]
+        weighted = [0.95**i * pp_values[i].pp for i in range(len(pp_values))]
         wsum = sum(weighted)
         new_pp = wsum + bonus_pp
 
-        message = "Prayge If " + user_data["username"] + " gets " + str(count) + " "
+        message = "Prayge If " + user_data["username"] + " gets "
+        message += f"{args['count']} " if args['count'] > 1 else "" 
         message += (
-            str(tokens[0])
-            + "pp score(s), he would be at "
-            + str(round(new_pp, 1))
-            + "pp (+"
+            str(args['pp'])
+            + f"pp score{'s' if args['count'] > 1 else ''}"
         )
-        message += str(round(new_pp - full_pp, 1)) + "pp)"
+        if (args['map_id'] > 0):
+            try:
+                map_response = self.osu.get_beatmap(args['map_id'])
+                map_name = map_name_from_response(map_response.json())
+                message += " on " + map_name
+            except:
+                logging.critical(traceback.format_exc())
+        message += (f", he would be at {round(new_pp, 1):}"
+            + "pp ("
+        )
+        message += f"{round(new_pp - full_pp, 1):+} pp)"
         return message
         # return "Not implemented yet self.users.get(request.channel)Business"
 

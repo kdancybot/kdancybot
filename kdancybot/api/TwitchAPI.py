@@ -54,14 +54,13 @@ class TwitchChatHandler:
         self.cd = Cooldown(self.command_templates.keys(), config["users"].keys())
         self.executor = ThreadPoolExecutor(20)
 
-    # def cooldown(self, method, channel, cd):
-    #     if not self.cooldowns[method].get(channel):
-    #         self.cooldowns[method][channel] = datetime.now()
-    #     logging.debug(channel, method)
-    #     if self.cooldowns[method][channel] > datetime.now():
-    #         return False
-    #     self.cooldowns[method][channel] = datetime.now() + timedelta(seconds=cd)
-    #     return True
+    async def respond_to_message(self, ws, message, ret):
+        if ret:
+            await ws.send(
+                "@reply-parent-msg-id={} PRIVMSG #{} :{}".format(
+                    message.tags.get("id", 0), message.channel, ret
+                )
+            )
 
     async def handle_requests(self, ws, message):
         if message.user.lower() not in self.ignored_users:
@@ -70,26 +69,16 @@ class TwitchChatHandler:
                 ret = await asyncio.get_event_loop().run_in_executor(
                     self.executor, self.commands.req, message, map_id
                 )
-                if ret:
-                    logging.warning(msg=message)
-                    await ws.send("@reply-parent-msg-id={} PRIVMSG #{} :{}".format(
-                        message.tags.get('id', 0),
-                        message.channel, 
-                        ret))
+                await self.respond_to_message(ws, message, ret)
 
     async def handle_commands(self, ws, message: Message):
-        # logging.warning(message.message[0])
         if message and message.user_command:
             command_func = self.command_templates.get(message.user_command)
             if command_func and self.cd.cd(message.user_command, message.channel):
                 ret = await asyncio.get_event_loop().run_in_executor(
                     self.executor, command_func, message
                 )
-                if ret:
-                    await ws.send("@reply-parent-msg-id={} PRIVMSG #{} :{}".format(
-                        message.tags.get('id', 0),
-                        message.channel, 
-                        ret))
+                await self.respond_to_message(ws, message, ret)
 
     async def handle_privmsg(self, ws, message):
         # await asyncio.gather(
@@ -105,7 +94,7 @@ class TwitchChatHandler:
             if message.type == "PRIVMSG":
                 await self.handle_privmsg(ws, message)
         except Exception as e:
-            logging.warning(traceback.print_exc())
+            logging.warning(traceback.format_exc())
             # logging.warning(e)
 
     async def login(self, ws):
@@ -133,9 +122,9 @@ class TwitchChatHandler:
                     message = Message(msg)
                     await self.handle_message(ws, message)
             except websockets.exceptions.ConnectionClosed as e:
-                logging.critical(traceback.format_exc())
+                logging.critical(e, traceback.format_exc())
                 continue
             except Exception as e:
-                logging.critical(traceback.format_exc())
+                logging.critical(e, traceback.format_exc())
                 await asyncio.sleep(7.27)
                 continue

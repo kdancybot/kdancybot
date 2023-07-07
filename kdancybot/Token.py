@@ -2,6 +2,7 @@ import requests
 import logging
 from datetime import datetime, timedelta
 
+logger = logging.getLogger(__name__)
 
 class Token:
     def __init__(self, config):
@@ -21,7 +22,7 @@ class Token:
 
         self.auth_template = "Bearer {}"
 
-        self._token = ""
+        self._token = str()
 
         self.expiration_date = datetime(1970, 1, 1)
 

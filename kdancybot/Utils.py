@@ -20,6 +20,10 @@ Mods = {
     "V2": 536870912,
 }
 
+class Map:
+        def __init__(self, pp, map_id):
+            self.pp = pp
+            self.map_id = map_id
 
 def username_from_response(response):
     username = response["username"]
@@ -135,3 +139,16 @@ def generate_mods_string(mods) -> str:
     return f" +{''.join(mods)}" if len(mods) else ""
 
 # def generate_
+
+def upsert_scores(old_scores: list[Map], new_scores: list[Map]) -> list[Map]:
+    lowest_pp = old_scores[-1].pp
+    for score in new_scores:
+        updated = False
+        for i in range(len(old_scores)):
+            if score.map_id == old_scores[i].map_id:
+                old_scores[i].pp = max(score.pp, lowest_pp)
+                updated = True
+                break
+        if not updated:
+            old_scores.append(score)
+    return old_scores
