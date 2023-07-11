@@ -31,6 +31,7 @@ class TwitchChatHandler:
             "ppdiff": self.commands.ppdiff,
             "whatif": self.commands.whatif,
             "top": self.commands.top,
+            "profile": self.commands.profile,
         }
 
         self.cd = Cooldown(self.command_templates.keys(), config["users"].keys())

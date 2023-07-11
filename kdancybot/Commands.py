@@ -371,6 +371,24 @@ class Commands:
             map_id = str(query[0]["beatmap"]["id"])
             mods = str(query[0]["beatmap"]["id"])
 
+    def profile(self, request: Message):
+        args = Parsing.Profile(request.arguments)
+        if not args.get("username"):
+            args["username"] = self.users.get(request.channel, 2)
+        user_data = self.osu.get_user_data(args["username"])
+        if not user_data.ok:
+            return "Who is this Concerned"
+        user = user_data.json()
+
+        message_parts = [
+            f"https://osu.ppy.sh/u/{user['id']}",
+            f"{user['username']}",
+            f"(#{user['statistics']['global_rank']}, #{user['statistics']['country_rank']}{user['country_code']})" if isinstance(user['statistics']['global_rank'], int) else "",
+            f"{user['statistics']['pp']}pp"
+        ]
+        message = ' '.join([part for part in message_parts if part])
+        return message
+
     def req(self, request: Message, map_id):
         BEATMAP_URL = "https://osu.ppy.sh/b/"
         beatmap = self.osu.get_beatmap(map_id)

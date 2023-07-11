@@ -31,6 +31,23 @@ class Parsing:
         def Value(token: str):
             return int(token)
 
+    class Username:
+        def Is(tokens: list):
+            try:
+                return len(" ".join([token for token in tokens if token])) <= 16
+            except ValueError:
+                return False
+
+        def Value(tokens: list):
+            return " ".join([token for token in tokens if token])
+
+    def Profile(tokens: list):
+        arguments = dict()
+        if tokens:
+            if Parsing.Username.Is(tokens):
+                arguments['username'] = Parsing.Username.Value(tokens)
+        return arguments
+
     def Top(tokens: list):
         arguments = dict()
         arguments["index"] = 1
