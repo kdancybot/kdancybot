@@ -3,6 +3,7 @@ from kdancybot.Message import Message
 from kdancybot.Commands import Commands
 from kdancybot.Timer import Timer
 from kdancybot.Cooldown import Cooldown
+from kdancybot.Utils import parse_beatmap_link
 
 import websockets
 import re
@@ -10,25 +11,6 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import traceback
-
-
-def parse_beatmap_link(message):
-    patterns = {
-        "official": r"osu.ppy.sh\/beatmapsets\/[0-9]+\#(osu|taiko|fruits|mania)\/(?P<map_id>[0-9]+)",
-        "official_alt": r"osu.ppy.sh\/beatmaps\/(?P<map_id>[0-9]+)",
-        "old_single": r"(osu|old).ppy.sh\/b\/(?P<map_id>[0-9]+)",
-    }
-
-    for link_type, pattern in patterns.items():
-        result = re.search(pattern, message)
-
-        # If there is no match, search for old beatmap link
-        if result is None:
-            continue
-        else:
-            return result["map_id"]
-
-    return None
 
 
 class TwitchChatHandler:
@@ -57,7 +39,7 @@ class TwitchChatHandler:
     async def respond_to_message(self, ws, message, ret):
         if ret:
             await ws.send(
-                "@reply-parent-msg-id={} PRIVMSG #{} :{}".format(
+                "@reply-parent-msg-id={} PRIVMSG #{} :[TEST BUILD] {}".format(
                     message.tags.get("id", 0), message.channel, ret
                 )
             )
@@ -95,7 +77,6 @@ class TwitchChatHandler:
                 await self.handle_privmsg(ws, message)
         except Exception as e:
             logging.warning(traceback.format_exc())
-            # logging.warning(e)
 
     async def login(self, ws):
         token = await asyncio.get_event_loop().run_in_executor(
@@ -118,13 +99,12 @@ class TwitchChatHandler:
                 await self.join_channels(ws)
                 logging.warning("Joined twitch chat!")
                 while True:
-                    msg = await ws.recv()
-                    message = Message(msg)
+                    message = Message(await ws.recv())
                     await self.handle_message(ws, message)
             except websockets.exceptions.ConnectionClosed as e:
-                logging.critical(e, traceback.format_exc())
+                logging.critical(traceback.format_exc())
                 continue
             except Exception as e:
-                logging.critical(e, traceback.format_exc())
+                logging.critical(traceback.format_exc())
                 await asyncio.sleep(7.27)
                 continue

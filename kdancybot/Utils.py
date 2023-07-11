@@ -1,6 +1,7 @@
 from rosu_pp_py import Beatmap, Calculator
 from datetime import datetime, timedelta, timezone
 import json
+import re
 
 PP_RECORD = 1371
 DEFAULT_USER = "5199332"
@@ -20,10 +21,12 @@ Mods = {
     "V2": 536870912,
 }
 
+
 class Map:
-        def __init__(self, pp, map_id):
-            self.pp = pp
-            self.map_id = map_id
+    def __init__(self, pp, map_id):
+        self.pp = pp
+        self.map_id = map_id
+
 
 def username_from_response(response):
     username = response["username"]
@@ -138,7 +141,26 @@ def score_age(date: str) -> str:
 def generate_mods_string(mods) -> str:
     return f" +{''.join(mods)}" if len(mods) else ""
 
+
 # def generate_
+
+
+def parse_beatmap_link(message):
+    patterns = {
+        "official": r"osu.ppy.sh\/beatmapsets\/[0-9]+\#(osu|taiko|fruits|mania)\/(?P<map_id>[0-9]+)",
+        "official_alt": r"osu.ppy.sh\/beatmaps\/(?P<map_id>[0-9]+)",
+        "old_single": r"(osu|old).ppy.sh\/b\/(?P<map_id>[0-9]+)",
+    }
+
+    for link_type, pattern in patterns.items():
+        result = re.search(pattern, message)
+        if result is None:
+            continue
+        else:
+            return result["map_id"]
+
+    return None
+
 
 def upsert_scores(old_scores: list[Map], new_scores: list[Map]) -> list[Map]:
     lowest_pp = old_scores[-1].pp
@@ -152,3 +174,4 @@ def upsert_scores(old_scores: list[Map], new_scores: list[Map]) -> list[Map]:
         if not updated:
             old_scores.append(score)
     return old_scores
+

@@ -33,6 +33,7 @@ class Parsing:
 
     def Top(tokens: list):
         arguments = dict()
+        arguments["index"] = 1
         if tokens:
             if Parsing.Index.Is(tokens[-1]):
                 arguments["index"] = Parsing.Index.Value(tokens.pop(-1))
@@ -60,6 +61,8 @@ class Parsing:
         arguments["map_id"] = 0
 
         if tokens and len(tokens) <= 2:
+            if '--recent-fc' in tokens:
+                arguments['map_id'] = 123
             if len(tokens) == 1 and Parsing.PPValue.Is(tokens[0]):
                 arguments["pp"] = Parsing.PPValue.Value(tokens[0])
             else:
