@@ -39,7 +39,7 @@ class TwitchChatHandler:
     async def respond_to_message(self, ws, message, ret):
         if ret:
             await ws.send(
-                "@reply-parent-msg-id={} PRIVMSG #{} :[TEST BUILD] {}".format(
+                "@reply-parent-msg-id={} PRIVMSG #{} :{}".format(
                     message.tags.get("id", 0), message.channel, ret
                 )
             )
