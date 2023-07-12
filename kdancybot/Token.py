@@ -40,15 +40,15 @@ class Token:
 
     def token(self):
         if not self.token_valid():
-            logging.info("Sent new token request")
+            logger.info("Sent new token request")
             response = requests.post(self.url, headers=self.headers, data=self.data)
 
             if response.ok:
-                logging.info("Got new token.")
+                logger.info("Got new token.")
                 self.update_token(response)
             else:
-                logging.warning(
-                    "Failed to create apiv2 token:",
+                logger.warning(
+                    "Failed to create apiv2 token with code %s: %s",
                     response.status_code,
                     response.json(),
                 )
@@ -85,12 +85,11 @@ class ChatToken(Token):
         self._token = response.json()["access_token"]
         self.data["refresh_token"] = response.json()["refresh_token"]
         self.config["osu"]["refresh_token"] = self.data["refresh_token"]
-        logging.debug(self.config["osu"]["refresh_token"])
 
         # Saving token like this for now
-        f = open("refresh_token.txt", "w")
-        f.write(self.config["osu"]["refresh_token"])
-        f.close()
+        # f = open("refresh_token.txt", "w")
+        # f.write(self.config["osu"]["refresh_token"])
+        # f.close()
 
         self.update_config()
 
@@ -111,11 +110,10 @@ class TwitchToken(Token):
         self._token = response.json()["access_token"]
         self.data["refresh_token"] = response.json()["refresh_token"]
         self.config["twitch"]["refresh_token"] = self.data["refresh_token"]
-        logging.debug(self.config["twitch"]["refresh_token"])
 
         # Saving token like this for now
-        f = open("refresh_token_twitch.txt", "w")
-        f.write(self.config["twitch"]["refresh_token"])
-        f.close()
+        # f = open("refresh_token_twitch.txt", "w")
+        # f.write(self.config["twitch"]["refresh_token"])
+        # f.close()
 
         self.update_config()

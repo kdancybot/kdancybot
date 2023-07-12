@@ -11,7 +11,7 @@ import logging
 import traceback
 import os
 
-
+logger = logging.getLogger(__name__)
 ### Methods working with osu!api, to be cropped and moved to Utils
 
 
@@ -28,7 +28,7 @@ class Commands:
                 map_data = file.read()
         else:
             map_data = self.osu.get_map_data(str(map_id)).content
-            os.makedirs(self.config['map']['folder'], exist_ok=True)
+            os.makedirs(self.config["map"]["folder"], exist_ok=True)
             with open(map_path, "wb") as file:
                 file.write(map_data)
         return map_data
@@ -108,8 +108,8 @@ class Commands:
         query = [re.sub("[^a-zA-Z0-9\[\]\-_ ]", "", word).strip() for word in query]
         tokens = [x for x in query if x]
         query = " ".join(tokens)
-        logging.info(f"'{query}'")
-        logging.info(f"{tokens}")
+        logger.info(f"'{query}'")
+        logger.info(f"{tokens}")
 
         user_data = self.osu.get_user_data(self.users.get(request.channel))
         other_data = self.osu.get_user_data(query)
@@ -131,25 +131,9 @@ class Commands:
         # username = username_from_response(user_data)
 
         if userpp > otherpp:
-            message = (
-                username_from_response(user_data)
-                + " is "
-                + str(round(userpp - otherpp, 1))
-                + "pp ahead of "
-                + username_from_response(other_data)
-                + ". "
-            )
-            message += self.message_to_overtake(other_data, user_data)
+            message = f"{username_from_response(user_data)} is {round(userpp - otherpp, 1)}pp ahead of {username_from_response(other_data)}. {self.message_to_overtake(other_data, user_data)}"
         else:
-            message = (
-                username_from_response(user_data)
-                + " is "
-                + str(round(otherpp - userpp, 1))
-                + "pp behind "
-                + username_from_response(other_data)
-                + ". "
-            )
-            message += self.message_to_overtake(user_data, other_data)
+            message = f"{username_from_response(user_data)} is {round(otherpp - userpp, 1)}pp behind {username_from_response(other_data)}. {self.message_to_overtake(user_data, other_data)}"
         return message
 
     def message_to_overtake(self, user_data, other_data):
@@ -280,7 +264,7 @@ class Commands:
                 map_name = map_name_from_response(map_response.json())
                 message += " on " + map_name
             except:
-                logging.warning(traceback.format_exc())
+                logger.warning(traceback.format_exc())
         message += f", he would be at {round(new_pp, 1):}" + "pp ("
         message += f"{round(new_pp - full_pp, 1):+} pp)"
         return message
@@ -383,10 +367,12 @@ class Commands:
         message_parts = [
             f"https://osu.ppy.sh/u/{user['id']}",
             f"{user['username']}",
-            f"(#{user['statistics']['global_rank']}, #{user['statistics']['country_rank']}{user['country_code']})" if isinstance(user['statistics']['global_rank'], int) else "",
-            f"{user['statistics']['pp']}pp"
+            f"(#{user['statistics']['global_rank']}, #{user['statistics']['country_rank']}{user['country_code']})"
+            if isinstance(user["statistics"]["global_rank"], int)
+            else "",
+            f"{user['statistics']['pp']}pp",
         ]
-        message = ' '.join([part for part in message_parts if part])
+        message = " ".join([part for part in message_parts if part])
         return message
 
     def req(self, request: Message, map_id):

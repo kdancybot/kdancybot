@@ -6,10 +6,11 @@ import logging
 
 configfile = "config.ini"
 
-logger = logging.getLogger("websockets")
-logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.StreamHandler())
-logging.basicConfig(filename="osubot.log")
+logging.basicConfig(
+    filename='osubot.log',
+    level=logging.INFO,
+    format="%(asctime)s - %(name)-25s - %(levelname)s - %(message)s",
+)
 
 if __name__ == "__main__":
     config = configparser.ConfigParser()
@@ -19,5 +20,3 @@ if __name__ == "__main__":
         twitch.loop(),
         # debug=True
     )
-
-# Здравствуйте мистер Илья Вопроссофф. Я обращаюсь к вам с официальным предложением подключения бота для осу.

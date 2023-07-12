@@ -137,12 +137,12 @@ class Message:
     def __str__(self):
         return f"""\
 full_message: {self.full_message}
-    tags: {self.tags}
-    command: {self.command}
-        user: {self.user}
-        type: {self.type}
-        params: {self.params}
-        channel: {self.channel}
-    message: {self.message}
-    user_command: {self.user_command}
-    arguments: {self.arguments}"""
+tags: {self.tags}
+command: {self.command}
+user: {self.user}
+type: {self.type}
+params: {self.params}
+channel: {self.channel}
+message: {self.message}
+user_command: {self.user_command}
+arguments: {self.arguments}"""

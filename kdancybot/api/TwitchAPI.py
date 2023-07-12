@@ -13,6 +13,9 @@ import asyncio
 import traceback
 
 
+logger = logging.getLogger(__name__)
+
+
 class TwitchChatHandler:
     def __init__(self, config: dict):
         self.config = config
@@ -77,7 +80,7 @@ class TwitchChatHandler:
             if message.type == "PRIVMSG":
                 await self.handle_privmsg(ws, message)
         except Exception as e:
-            logging.warning(traceback.format_exc())
+            logger.warning(traceback.format_exc())
 
     async def login(self, ws):
         token = await asyncio.get_event_loop().run_in_executor(
@@ -98,14 +101,20 @@ class TwitchChatHandler:
             try:
                 await self.login(ws)
                 await self.join_channels(ws)
-                logging.warning("Joined twitch chat!")
+                logger.info("Joined twitch chat!")
                 while True:
                     message = Message(await ws.recv())
                     await self.handle_message(ws, message)
             except websockets.exceptions.ConnectionClosed as e:
-                logging.critical(traceback.format_exc())
+                logger.warning("Connection closed%s",
+                    " abnormally"
+                    if isinstance(e, websockets.exceptions.ConnectionClosedError)
+                    else ""
+                )
+                logger.warning(traceback.format_exc())
                 continue
             except Exception as e:
-                logging.critical(traceback.format_exc())
+                logger.critical("IDK WHAT'S HAPPENED, RESTARTING IN 7.27 SECONDS")
+                logger.critical(traceback.format_exc())
                 await asyncio.sleep(7.27)
                 continue

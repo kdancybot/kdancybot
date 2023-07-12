@@ -32,7 +32,7 @@ class Cooldown:
     def cd(self, command, channel):
         if not self.next_use[command].get(channel):
             self.next_use[command][channel] = datetime.now()
-        # logging.debug(channel, method)
+        # logger.debug(channel, method)
         if self.next_use[command][channel] > datetime.now():
             return False
         self.next_use[command][channel] = datetime.now() + timedelta(

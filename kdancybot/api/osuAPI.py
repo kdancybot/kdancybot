@@ -4,6 +4,9 @@ import logging
 from kdancybot.Token import ApiToken, ChatToken
 
 
+logger = logging.getLogger(__name__)
+
+
 class osuAPIv2:
     def __init__(self, config):
         super().__init__()
@@ -25,11 +28,11 @@ class osuAPIv2:
     def any_request(self, url: str, http_method: str, **kwargs):
         headers = kwargs.get("headers")
         data = kwargs.get("data")
-        logging.info(
+        logger.info(
             f"Requesting with {http_method} method from {url} with kwargs: {kwargs}"
         )
         r = requests.request(http_method, url, headers=headers, data=data)  # .json()
-        logging.info(f"Got {r.status_code} code")
+        logger.info(f"Got {r.status_code} code")
         return r
 
     def api_request(self, endpoint: str, http_method: str, **kwargs):
