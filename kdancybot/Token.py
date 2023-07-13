@@ -41,7 +41,7 @@ class Token:
     def token(self):
         if not self.token_valid():
             logger.info("Sent new token request")
-            response = requests.post(self.url, headers=self.headers, data=self.data)
+            response = requests.request('POST', self.url, headers=self.headers, data=self.data)
 
             if response.ok:
                 logger.info("Got new token.")

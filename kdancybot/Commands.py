@@ -1,5 +1,5 @@
 from kdancybot.Utils import *
-import kdancybot.api.osuAPI
+import kdancybot.api.osuAPIExtended
 from kdancybot.Message import Message
 from kdancybot.Parsing import Parsing
 
@@ -17,85 +17,13 @@ logger = logging.getLogger(__name__)
 
 class Commands:
     def __init__(self, config):
-        self.osu = kdancybot.api.osuAPI.osuAPIv2(config)
+        self.osu = kdancybot.api.osuAPIExtended.osuAPIExtended(config)
         self.config = config
         self.users = config["users"]
 
-    def get_map_data(self, map_id):
-        map_path = f"{self.config['map']['folder']}/{map_id}.osu"
-        if os.path.isfile(map_path) and os.path.getsize(map_path):
-            with open(map_path, "rb") as file:
-                map_data = file.read()
-        else:
-            map_data = self.osu.get_map_data(str(map_id)).content
-            os.makedirs(self.config["map"]["folder"], exist_ok=True)
-            with open(map_path, "wb") as file:
-                file.write(map_data)
-        return map_data
-
-    def prepare_score_info(self, score_data):
-        args = dict()
-
-        beatmap_attributes = self.osu.get_beatmap_attributes(
-            score_data["beatmap"]["id"], generate_mods_payload(score_data["mods"])
-        ).json()["attributes"]
-
-        map_data = self.get_map_data(str(score_data["beatmap"]["id"]))
-        objects_passed = get_passed_objects(score_data)
-        all_objects = get_objects_count(score_data)
-        n100 = (score_data["statistics"]["count_100"] * all_objects) // objects_passed
-        n50 = (score_data["statistics"]["count_50"] * all_objects) // objects_passed
-        n300 = all_objects - n100 - n50
-        acc = 100 * (n300 + n100 / 3 + n50 / 6) / all_objects
-
-        calc = build_calculator(score_data)
-        beatmap = Beatmap(bytes=map_data)
-
-        curr_perf = calc.performance(beatmap)
-        calc.set_passed_objects(all_objects)
-        calc.set_n300(n300)
-        calc.set_n100(n100)
-        calc.set_n50(n50)
-        calc.set_n_misses(0)
-        calc.set_combo(beatmap_attributes["max_combo"])
-        perf = calc.performance(beatmap)
-
-        args["max_combo"] = beatmap_attributes["max_combo"]
-        args["star_rating"] = beatmap_attributes["star_rating"]
-        args["curr_perf"] = curr_perf
-        args["perf"] = perf
-        args["acc"] = acc
-        return args
-
-    def score_info_build(self, score_data, args, remove_https=False):
-        acc = args["acc"]
-        message_parts = [
-            f"{'https://' if not remove_https else ''}osu.ppy.sh/b/{score_data['beatmap']['id']}",  # map link
-            map_name_from_response(score_data),  # map name
-            f"{round(args['star_rating'], 2)}*",  # star rating
-            generate_mods_string(score_data["mods"]),  # mods | None
-            f"{round(score_data['accuracy'] * 100, 2)}%",  # accuracy
-            f"{score_data['max_combo']}/{args['max_combo']}x"  # combo or "FC"
-            if args["max_combo"] != score_data["max_combo"]
-            else "FC",
-            f"{score_data['statistics']['count_miss']}xMiss"  # misses | None
-            if score_data["statistics"]["count_miss"]
-            else "",
-            f"{int((score_data['pp'] if score_data['pp'] else args['curr_perf'].pp) + .5)}pp",
-            f"({int(args['perf'].pp + 0.5)}pp for {f'{round(acc, 2)}% FC' if acc != 100 else 'SS'})"
-            if args["max_combo"] >= score_data["max_combo"] + 10
-            or score_data["statistics"]["count_miss"]
-            else "",
-            "if ranked" if score_data["beatmap"]["status"] != "ranked" else "",
-            f"{score_age(score_data['created_at'])} ago",
-        ]
-        # message = message.replace('"', "")
-        message = " ".join([part for part in message_parts if part])
-        return message
-
     def score_info(self, score_data, remove_https=False):
-        args = self.prepare_score_info(score_data)
-        return self.score_info_build(score_data, args, remove_https)
+        args = self.osu.prepare_score_info(score_data)
+        return self.osu.score_info_build(score_data, args, remove_https)
 
     # def get_user_pair(lhs: str, rhs: str):
     #     tasks = [asyncio.ensure_future(get_user_data(u)) for u in [lhs, rhs]]
@@ -159,43 +87,22 @@ class Commands:
         message = self.prepare_ppdiff_message(user_data.json(), other_data.json())
         return message
 
-    def recent_request(self, request):
-        pass
-
     def recent(self, request):
         args = Parsing.Recent(request.arguments)
         if not args.get("username"):
             args["username"] = self.users.get(request.channel)
-        if not args.get("index"):
-            args["index"] = 1
-        message = ""
+        # message = ""
 
-        user_data = self.osu.get_user_data(args["username"])
-        if not user_data.ok:
+        args = self.osu.recent(args)
+        if args["invalid_username"]:
             return "Who is this Concerned"
 
-        scores_func = (
-            self.osu.get_today_scores
-            if args.get("pass-only")
-            else self.osu.get_last_played
-        )
-        recent_score = scores_func(user_data.json()["id"])
-        if not recent_score.ok or len(recent_score.json()) == 0:
-            return (
-                "No scores for "
-                + username_from_response(user_data.json())
-                + " in last 24 hours"
-            )
-            args["actual_index"] = 0
-        elif len(recent_score.json()) < args["index"]:
-            message += "Requested place unavailable, falling back to most recent. "
-            args["actual_index"] = 1
-        else:
-            args["actual_index"] = args["index"]
+        if args["no_scores_today"]:
+            return f"No scores for {username_from_response(user_data.json())} in last 24 hours"
 
-        score_data = recent_score.json()[args["actual_index"] - 1]
-        message += self.score_info(
-            score_data,
+        # score_data = recent_score.json()[args["actual_index"] - 1]
+        message = self.score_info(
+            args["score_data"],
             remove_https=request.channel in self.config["ignore_requests"].keys(),
         )
         return message
@@ -230,7 +137,9 @@ class Commands:
         return message
 
     def whatif(self, request):
-        args = Parsing.Whatif(request.arguments)
+        args = Parsing.Whatif(
+            request.arguments, self.osu, username=self.users.get(request.channel)
+        )
 
         if not args.get("pp"):
             return "Invalid arguments Tssk"
@@ -257,7 +166,7 @@ class Commands:
 
         message = "Prayge If " + user_data["username"] + " gets "
         message += f"{args['count']} " if args["count"] > 1 else ""
-        message += str(args["pp"]) + f"pp score{'s' if args['count'] > 1 else ''}"
+        message += f"{round(args['pp'], 1)}pp score{'s' if args['count'] > 1 else ''}"
         if args["map_id"] > 0:
             try:
                 map_response = self.osu.get_beatmap(args["map_id"])

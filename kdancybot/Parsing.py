@@ -1,3 +1,5 @@
+from kdancybot.api.osuAPIExtended import osuAPIExtended
+
 class Parsing:
     class Index:
         def Is(token: str):
@@ -41,14 +43,14 @@ class Parsing:
         def Value(tokens: list):
             return " ".join([token for token in tokens if token])
 
-    def Profile(tokens: list):
+    def Profile(tokens: list, **kwargs):
         arguments = dict()
         if tokens:
             if Parsing.Username.Is(tokens):
                 arguments['username'] = Parsing.Username.Value(tokens)
         return arguments
 
-    def Top(tokens: list):
+    def Top(tokens: list, **kwargs):
         arguments = dict()
         arguments["index"] = 1
         if tokens:
@@ -57,9 +59,11 @@ class Parsing:
             elif Parsing.Index.Is(tokens[0]):
                 arguments["index"] = Parsing.Index.Value(tokens.pop(0))
             arguments["username"] = " ".join([token for token in tokens if token])
+            if "username" not in arguments:
+                arguments["username"] = kwargs.get("username")
         return arguments
 
-    def Recent(tokens: list):
+    def Recent(tokens: list, **kwargs):
         arguments = dict()
 
         # set submitted only flag
@@ -68,18 +72,26 @@ class Parsing:
             arguments["pass-only"] = True
             tokens.remove("--pass-only")
 
-        arguments.update(Parsing.Top(tokens))
+        arguments.update(Parsing.Top(tokens, **kwargs))
         return arguments
 
-    def Whatif(tokens: list):
+    def Whatif(tokens: list, osu=None, **kwargs):
         arguments = dict()
 
         arguments["count"] = 1
         arguments["map_id"] = 0
 
-        if tokens and len(tokens) <= 2:
-            if '--recent-fc' in tokens:
-                arguments['map_id'] = 123
+        if tokens and '--recent-fc' in tokens and osu:
+            tokens.remove('--recent-fc')
+            recent_args = Parsing.Recent(tokens)
+            recent_args['username'] = kwargs.get('username')
+            arguments['recent'] = osu.recent(recent_args)
+            # breakpoint()
+            arguments['map_id'] = arguments['recent']['score_data']['beatmap']['id']
+            arguments['pp'] = osu.prepare_score_info(arguments['recent']['score_data'])['perf'].pp
+
+
+        elif tokens and len(tokens) <= 2:
             if len(tokens) == 1 and Parsing.PPValue.Is(tokens[0]):
                 arguments["pp"] = Parsing.PPValue.Value(tokens[0])
             else:

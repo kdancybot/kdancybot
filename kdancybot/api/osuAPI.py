@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 class osuAPIv2:
     def __init__(self, config):
         super().__init__()
+        self.config = config
         self.api_token = ApiToken(config)
         self.chat_token = ChatToken(config)
         self.request_headers = {
@@ -28,11 +29,11 @@ class osuAPIv2:
     def any_request(self, url: str, http_method: str, **kwargs):
         headers = kwargs.get("headers")
         data = kwargs.get("data")
-        logger.info(
+        logger.debug(
             f"Requesting with {http_method} method from {url} with kwargs: {kwargs}"
         )
         r = requests.request(http_method, url, headers=headers, data=data)  # .json()
-        logger.info(f"Got {r.status_code} code")
+        logger.debug(f"Got {r.status_code} code")
         return r
 
     def api_request(self, endpoint: str, http_method: str, **kwargs):
@@ -110,7 +111,6 @@ class osuAPIv2:
         if response.ok:
             chat = response.json()["channel"]
         return response
-
 
 class Template:
     base = "https://osu.ppy.sh/api/v2/"

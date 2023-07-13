@@ -52,7 +52,7 @@ class TwitchChatHandler:
         if message.user.lower() not in self.ignored_users:
             map_id = parse_beatmap_link(message.message)
             if map_id and self.cd.cd("request", message.channel):
-                ret = await asyncio.get_event_loop().run_in_executor(
+                ret = await asyncio.get_event_loop().run_in_executor(   
                     self.executor, self.commands.req, message, map_id
                 )
                 await self.respond_to_message(ws, message, ret)
@@ -61,6 +61,11 @@ class TwitchChatHandler:
         if message and message.user_command:
             command_func = self.command_templates.get(message.user_command)
             if command_func and self.cd.cd(message.user_command, message.channel):
+                logger.info("%s - %s: %s",
+                    message.channel,
+                    message.user,
+                    message.message
+                )
                 ret = await asyncio.get_event_loop().run_in_executor(
                     self.executor, command_func, message
                 )
