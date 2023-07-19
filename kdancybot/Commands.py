@@ -98,7 +98,7 @@ class Commands:
             return "Who is this Concerned"
 
         if args["no_scores_today"]:
-            return f"No scores for {username_from_response(user_data.json())} in last 24 hours"
+            return f"No scores for {args['username_rank']} in last 24 hours"
 
         # score_data = recent_score.json()[args["actual_index"] - 1]
         message = self.score_info(
@@ -284,14 +284,31 @@ class Commands:
         message = " ".join([part for part in message_parts if part])
         return message
 
-    def req(self, request: Message, map_id):
+    def req(self, request: Message, map_info: dict):
         BEATMAP_URL = "https://osu.ppy.sh/b/"
-        beatmap = self.osu.get_beatmap(map_id)
+        beatmap = self.osu.get_beatmap(map_info["map_id"])
+        beatmap_attributes = self.osu.get_beatmap_attributes(
+            map_info["map_id"], generate_mods_payload(map_info.get("mods", ""))
+        ).json()['attributes']
         if beatmap.ok:
+            logger.info(beatmap.json()['bpm'])
+            logger.info(map_info['mods'])
+            bpm = int((beatmap.json().get("bpm", 0) * (1.5 if ('DT' in map_info['mods']) or ('NC' in map_info['mods']) else 0.75 if 'HT' in map_info['mods'] else 1)) + 0.5)
+            mods = f"{'+' if map_info['mods'] else ''}{''.join(map_info['mods'])}"
             map_name = map_name_from_response(beatmap.json())
-            message = f"{request.user} | [{BEATMAP_URL}{map_id} {map_name}]"
+            message_parts = [
+                f"{request.user} |",
+                f"[{BEATMAP_URL}{map_info['map_id']}",
+                f"{map_name}",
+                f"{mods}",
+                f"({round(beatmap_attributes['star_rating'], 2)}*,",
+                f"{bpm}BPM)]"
+            ]
+            message = ' '.join([part for part in message_parts if part])
+            logger.info(message)
+            # message = f"{request.user} | [{BEATMAP_URL}{map_info['map_id']} {map_name} ({beatmap_attributes['meme']})]"
             response = self.osu.send_pm(self.users.get(request.channel), message)
-            return f"{request.user} sent request: {map_name}"
+            return f"{request.user} sent request: {map_name} {mods}"
         else:
             return "Seems like beatmap does not exist, are you sure dogQ"
 

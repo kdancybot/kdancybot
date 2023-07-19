@@ -4,6 +4,7 @@ from kdancybot.Utils import *
 from rosu_pp_py import Beatmap, Calculator
 import os
 
+
 class osuAPIExtended(osuAPIv2):
     def __init__(self, config):
         super().__init__(config)
@@ -84,24 +85,21 @@ class osuAPIExtended(osuAPIv2):
         # data = dict()
         args["invalid_username"] = False
         args["no_scores_today"] = False
-        args['index_too_big'] = False
+        args["index_too_big"] = False
         user_data = self.get_user_data(args["username"])
         if not user_data.ok:
-            args['invalid_username'] = True
+            args["invalid_username"] = True
         else:
+            args["username_rank"] = username_from_response(user_data.json())
             scores_func = (
-                self.get_today_scores
-                if args.get('pass-only')
-                else self.get_last_played
+                self.get_today_scores if args.get("pass-only") else self.get_last_played
             )
             recent_score = scores_func(user_data.json()["id"])
             if not recent_score.ok or len(recent_score.json()) == 0:
-                args['no_scores_today'] = True
+                args["no_scores_today"] = True
             else:
-                if len(recent_score.json()) < args['index']:
-                    args['index_too_big'] = True
-                    args['index'] = 1
-                args['score_data'] = recent_score.json()[args["index"] - 1]
+                if len(recent_score.json()) < args["index"]:
+                    args["index_too_big"] = True
+                    args["index"] = 1
+                args["score_data"] = recent_score.json()[args["index"] - 1]
         return args
-
-    

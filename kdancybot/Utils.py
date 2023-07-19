@@ -10,13 +10,13 @@ Mods = {
     "NF": 1,
     "EZ": 2,
     "HT": 256,
-    "HR": 16,
-    "SD": 32,
-    "PF": 16384,
+    "HD": 8,
     "DT": 64,
     "NC": 576,
-    "HD": 8,
+    "HR": 16,
     "FL": 1024,
+    "SD": 32,
+    "PF": 16384,
     "SO": 4096,
     "V2": 536870912,
 }
@@ -107,7 +107,8 @@ def get_objects_count(score_data):
 def generate_mods_payload(mods):
     payload = ""
     for mod in mods:
-        payload += "mods%5B%5D=" + mod + "&"
+        if mod in Mods.keys():
+            payload += "mods%5B%5D=" + mod + "&"
     if len(payload):
         payload = payload[:-1]
     return payload
@@ -147,17 +148,20 @@ def generate_mods_string(mods) -> str:
 
 def parse_beatmap_link(message):
     patterns = {
-        "official": r"osu.ppy.sh\/beatmapsets\/[0-9]+\#(osu|taiko|fruits|mania)\/(?P<map_id>[0-9]+)",
-        "official_alt": r"osu.ppy.sh\/beatmaps\/(?P<map_id>[0-9]+)",
-        "old_single": r"(osu|old).ppy.sh\/b\/(?P<map_id>[0-9]+)",
+        "default": r"osu\.ppy\.sh\/beatmapsets\/(?P<set_id>[0-9]{1,7})\#(?P<mode>osu|taiko|fruits|mania)\/(?P<map_id>[0-9]{1,7})\+?(?P<mods>[[ -~]*)",
+        "short": r"osu.ppy.sh\/beatmaps\/(?P<map_id>[0-9]+)\+?(?P<mods>[[ -~]*)",
+        "even_shorter": r"(osu|old).ppy.sh\/b\/(?P<map_id>[0-9]+)\+?(?P<mods>[[ -~]*)?",
     }
 
     for link_type, pattern in patterns.items():
         result = re.search(pattern, message)
-        if result is None:
-            continue
-        else:
-            return result["map_id"]
+        if result is not None:
+            result = result.groupdict()
+
+            result['mods'] = re.sub(r"[^A-Za-z]", "", result.get('mods', "").upper())
+            result['mods'] = [result['mods'][i:i+2] for i in range(0, len(result['mods']), 2)]
+            result['mods'] = list(mod for mod in Mods.keys() if mod in result['mods'])
+            return result  # ["map_id"]
 
     return None
 
@@ -174,4 +178,3 @@ def upsert_scores(old_scores: list[Map], new_scores: list[Map]) -> list[Map]:
         if not updated:
             old_scores.append(score)
     return old_scores
-
