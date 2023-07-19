@@ -36,8 +36,8 @@ class Commands:
         query = [re.sub("[^a-zA-Z0-9\[\]\-_ ]", "", word).strip() for word in query]
         tokens = [x for x in query if x]
         query = " ".join(tokens)
-        logger.info(f"'{query}'")
-        logger.info(f"{tokens}")
+        logger.debug(f"'{query}'")
+        logger.debug(f"{tokens}")
 
         user_data = self.osu.get_user_data(self.users.get(request.channel))
         other_data = self.osu.get_user_data(query)
@@ -291,8 +291,6 @@ class Commands:
             map_info["map_id"], generate_mods_payload(map_info.get("mods", ""))
         ).json()['attributes']
         if beatmap.ok:
-            logger.info(beatmap.json()['bpm'])
-            logger.info(map_info['mods'])
             bpm = int((beatmap.json().get("bpm", 0) * (1.5 if ('DT' in map_info['mods']) or ('NC' in map_info['mods']) else 0.75 if 'HT' in map_info['mods'] else 1)) + 0.5)
             mods = f"{'+' if map_info['mods'] else ''}{''.join(map_info['mods'])}"
             map_name = map_name_from_response(beatmap.json())
@@ -305,7 +303,6 @@ class Commands:
                 f"{bpm}BPM)]"
             ]
             message = ' '.join([part for part in message_parts if part])
-            logger.info(message)
             # message = f"{request.user} | [{BEATMAP_URL}{map_info['map_id']} {map_name} ({beatmap_attributes['meme']})]"
             response = self.osu.send_pm(self.users.get(request.channel), message)
             return f"{request.user} sent request: {map_name} {mods}"
