@@ -148,9 +148,9 @@ def generate_mods_string(mods) -> str:
 
 def parse_beatmap_link(message):
     patterns = {
-        "default": r"osu\.ppy\.sh\/beatmapsets\/(?P<set_id>[0-9]{1,7})\#(?P<mode>osu|taiko|fruits|mania)\/(?P<map_id>[0-9]{1,7})\+?(?P<mods>[[ -~]*)",
-        "short": r"osu.ppy.sh\/beatmaps\/(?P<map_id>[0-9]+)\+?(?P<mods>[[ -~]*)",
-        "even_shorter": r"(osu|old).ppy.sh\/b\/(?P<map_id>[0-9]+)\+?(?P<mods>[[ -~]*)?",
+        "default": r"osu\.ppy\.sh\/beatmapsets\/(?P<set_id>[0-9]{1,7})\#(?P<mode>osu|taiko|fruits|mania)\/(?P<map_id>[0-9]{1,7})\+?(?P<mods>[ -~]*)",
+        "short": r"osu.ppy.sh\/beatmaps\/(?P<map_id>[0-9]+)\+?(?P<mods>[ -~]*)",
+        "even_shorter": r"(osu|old).ppy.sh\/b\/(?P<map_id>[0-9]+)\+?(?P<mods>[ -~]*)?",
     }
 
     for link_type, pattern in patterns.items():
