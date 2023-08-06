@@ -25,6 +25,10 @@ class Commands:
         args = self.osu.prepare_score_info(score_data)
         return self.osu.score_info_build(score_data, args, remove_https)
 
+    def map_info(self, score_data, remove_https=False):
+        args = self.osu.prepare_score_info(score_data)
+        return self.osu.map_info_build(score_data, args, remove_https)
+
     # def get_user_pair(lhs: str, rhs: str):
     #     tasks = [asyncio.ensure_future(get_user_data(u)) for u in [lhs, rhs]]
     #     users = asyncio.gather(*tasks)
@@ -102,6 +106,26 @@ class Commands:
 
         # score_data = recent_score.json()[args["actual_index"] - 1]
         message = self.score_info(
+            args["score_data"],
+            remove_https=request.channel in self.config["ignore_requests"].keys(),
+        )
+        return message
+
+    def recent_played(self, request):
+        args = Parsing.Recent(request.arguments)
+        if not args.get("username"):
+            args["username"] = self.users.get(request.channel)
+        # message = ""
+
+        args = self.osu.recent(args)
+        if args["invalid_username"]:
+            return "Who is this Concerned"
+
+        if args["no_scores_today"]:
+            return f"No scores for {args['username_rank']} in last 24 hours"
+
+        # score_data = recent_score.json()[args["actual_index"] - 1]
+        message = self.map_info(
             args["score_data"],
             remove_https=request.channel in self.config["ignore_requests"].keys(),
         )
@@ -289,9 +313,21 @@ class Commands:
         beatmap = self.osu.get_beatmap(map_info["map_id"])
         beatmap_attributes = self.osu.get_beatmap_attributes(
             map_info["map_id"], generate_mods_payload(map_info.get("mods", ""))
-        ).json()['attributes']
+        ).json()["attributes"]
         if beatmap.ok:
-            bpm = int((beatmap.json().get("bpm", 0) * (1.5 if ('DT' in map_info['mods']) or ('NC' in map_info['mods']) else 0.75 if 'HT' in map_info['mods'] else 1)) + 0.5)
+            bpm = int(
+                (
+                    beatmap.json().get("bpm", 0)
+                    * (
+                        1.5
+                        if ("DT" in map_info["mods"]) or ("NC" in map_info["mods"])
+                        else 0.75
+                        if "HT" in map_info["mods"]
+                        else 1
+                    )
+                )
+                + 0.5
+            )
             mods = f"{'+' if map_info['mods'] else ''}{''.join(map_info['mods'])}"
             map_name = map_name_from_response(beatmap.json())
             message_parts = [
@@ -300,9 +336,9 @@ class Commands:
                 f"{map_name}",
                 f"{mods}",
                 f"({round(beatmap_attributes['star_rating'], 2)}*,",
-                f"{bpm}BPM)]"
+                f"{bpm}BPM)]",
             ]
-            message = ' '.join([part for part in message_parts if part])
+            message = " ".join([part for part in message_parts if part])
             # message = f"{request.user} | [{BEATMAP_URL}{map_info['map_id']} {map_name} ({beatmap_attributes['meme']})]"
             response = self.osu.send_pm(self.users.get(request.channel), message)
             return f"{request.user} sent request: {map_name} {mods}"

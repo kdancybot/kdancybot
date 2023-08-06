@@ -58,10 +58,7 @@ class osuAPIExtended(osuAPIv2):
     def score_info_build(self, score_data, args, remove_https=False):
         acc = args["acc"]
         message_parts = [
-            f"{'https://' if not remove_https else ''}osu.ppy.sh/b/{score_data['beatmap']['id']}",  # map link
-            map_name_from_response(score_data),  # map name
-            f"{round(args['star_rating'], 2)}*",  # star rating
-            generate_mods_string(score_data["mods"]),  # mods | None
+            self.map_info_build(score_data, args, remove_https),  # mods | None
             f"{round(score_data['accuracy'] * 100, 2)}%",  # accuracy
             f"{score_data['max_combo']}/{args['max_combo']}x"  # combo or "FC"
             if args["max_combo"] != score_data["max_combo"]
@@ -78,6 +75,16 @@ class osuAPIExtended(osuAPIv2):
             f"{score_age(score_data['created_at'])} ago",
         ]
         # message = message.replace('"', "")
+        message = " ".join([part for part in message_parts if part])
+        return message
+
+    def map_info_build(self, score_data, args, remove_https=False):
+        message_parts = [
+            f"{'https://' if not remove_https else ''}osu.ppy.sh/b/{score_data['beatmap']['id']}",  # map link
+            map_name_from_response(score_data),  # map name
+            f"{round(args['star_rating'], 2)}*",  # star rating
+            generate_mods_string(score_data["mods"]),
+        ]
         message = " ".join([part for part in message_parts if part])
         return message
 
