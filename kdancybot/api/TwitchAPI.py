@@ -36,6 +36,12 @@ class TwitchChatHandler:
             "top": self.commands.top,
             "profile": self.commands.profile,
             "np": self.commands.recent_played,
+            "к": self.commands.recent,
+            "ки": self.commands.recentbest,
+            "еи": self.commands.todaybest,
+            "црфеша": self.commands.whatif,
+            "ещз": self.commands.top,
+            "тз": self.commands.recent_played,
         }
 
         self.cd = Cooldown(self.command_templates.keys(), config["users"].keys())

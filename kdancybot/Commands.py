@@ -153,7 +153,7 @@ class Commands:
             args["index"] = 1
         score_data = top100[args["index"] - 1]
 
-        message += ordinal(args["index"]) + " top score for " + username + ": "
+        message += f"{ordinal(args['index'])} top score for {username}: "
         message += self.score_info(
             score_data,
             remove_https=(request.channel in self.config["ignore_requests"].keys()),
