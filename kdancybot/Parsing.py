@@ -1,6 +1,16 @@
 from kdancybot.api.osuAPIExtended import osuAPIExtended
 
+
 class Parsing:
+    # class Item:
+    #     # def
+
+    #     def Is(token: str):
+    #         pass
+
+    #     def Value(token: str):
+    #         pass
+
     class Index:
         def Is(token: str):
             try:
@@ -43,11 +53,46 @@ class Parsing:
         def Value(tokens: list):
             return " ".join([token for token in tokens if token])
 
+    class Combo:
+        def Is(token: str):
+            try:
+                return token[-1].lower() == "x" and int(token[:-1])
+            except ValueError:
+                return False
+
+        def Value(token: str):
+            return int(token[:-1])
+
+    class Accuracy:
+        def Is(token: str):
+            try:
+                return token[-1] == "%" and float(token[:-1])
+            except ValueError:
+                return False
+
+        def Value(token: str):
+            return float(token[:-1])
+
+    class Misses:
+        def Is(token: str):
+            try:
+                return token[-1].lower() == "m" and int(token[:-1])
+            except ValueError:
+                try:
+                    return token[-2:].lower() == "xm" and int(token[:-2])
+                except ValueError:
+                    return False
+
+        def Value(token: str):
+            if token[-2].lower() == "x":
+                return int(token[:-2])
+            return int(token[:-1])
+
     def Profile(tokens: list, **kwargs):
         arguments = dict()
         if tokens:
             if Parsing.Username.Is(tokens):
-                arguments['username'] = Parsing.Username.Value(tokens)
+                arguments["username"] = Parsing.Username.Value(tokens)
         return arguments
 
     def Top(tokens: list, **kwargs):
@@ -82,19 +127,19 @@ class Parsing:
         arguments["map_id"] = 0
 
         if tokens:
-            if '--recent-fc' in tokens and osu:
-                tokens.remove('--recent-fc')
+            if "--recent-fc" in tokens and osu:
+                tokens.remove("--recent-fc")
                 recent_args = Parsing.Recent(tokens)
-                recent_args['username'] = kwargs.get('username')
-                arguments['recent'] = osu.recent(recent_args)
-                arguments['map_id'] = arguments['recent']['score_data']['beatmap']['id']
-                arguments['pp'] = osu.prepare_score_info(arguments['recent']['score_data'])['perf'].pp
-
+                recent_args["username"] = kwargs.get("username")
+                arguments["recent"] = osu.recent(recent_args)
+                arguments["map_id"] = arguments["recent"]["score_data"]["beatmap"]["id"]
+                arguments["pp"] = osu.prepare_score_info(
+                    arguments["recent"]["score_data"]
+                )["perf"].pp
 
             elif len(tokens) == 1:
                 if Parsing.PPValue.Is(tokens[0]):
                     arguments["pp"] = Parsing.PPValue.Value(tokens[0])
-            
 
             elif len(tokens) <= 2:
                 if len(tokens) == 1 and Parsing.PPValue.Is(tokens[0]):
@@ -115,3 +160,19 @@ class Parsing:
                             tokens[0], tokens[1] = tokens[1], tokens[0]
                             continue
         return arguments
+
+    def PP(tokens: list, osu=None, **kwargs):
+        recent = ["r", "-r", "recent", "--recent"]
+        arguments = dict()
+        if tokens:
+            if any(x in recent for x in tokens) and osu:
+                tokens = [x for x in tokens if x not in recent]
+                recent_args = dict()
+                recent_args["username"] = kwargs.get("username")
+                arguments["recent"] = osu.recent(recent_args)
+                arguments["map_id"] = arguments["recent"]["score_data"]["beatmap"]["id"]
+                arguments["mods"] = arguments["recent"]["score_data"]
+                # arguments["pp"] = osu.prepare_score_info(
+                #     arguments["recent"]["score_data"]
+                # )["perf"].pp
+        pass

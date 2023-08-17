@@ -1,6 +1,7 @@
 from kdancybot.Token import TwitchToken
 from kdancybot.Message import Message
 from kdancybot.Commands import Commands
+from kdancybot.PersonalCommands import PersonalCommands
 from kdancybot.Timer import Timer
 from kdancybot.Cooldown import Cooldown
 from kdancybot.Utils import parse_beatmap_link
@@ -21,6 +22,7 @@ class TwitchChatHandler:
         self.config = config
         self.token = TwitchToken(config)
         self.commands = Commands(config)
+        self.personal_commands = PersonalCommands(config)
         self.url = "ws://irc-ws.chat.twitch.tv:80"
         self.username = "kdancybot"
         self.ignored_users = [self.username, "nightbot", "streamelements"]
@@ -66,9 +68,14 @@ class TwitchChatHandler:
 
     async def handle_commands(self, ws, message: Message):
         if message and message.user_command:
+            personal_command_func = self.personal_commands[message.channel].get(message.user_command)
             command_func = self.command_templates.get(message.user_command)
-            if command_func and self.cd.cd(message.user_command, message.channel):
-                ("%s - %s: %s", message.channel, message.user, message.message)
+            if personal_command_func:
+                ret = await asyncio.get_event_loop().run_in_executor(
+                    self.executor, personal_command_func, message
+                )
+                await self.respond_to_message(ws, message, ret)
+            elif command_func and self.cd.cd(message.user_command, message.channel):
                 ret = await asyncio.get_event_loop().run_in_executor(
                     self.executor, command_func, message
                 )
