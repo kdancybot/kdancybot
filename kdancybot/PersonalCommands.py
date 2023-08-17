@@ -9,7 +9,7 @@ class PersonalCommands:
         self.commands = dict()
         for user in self.users:
             self.commands[user] = dict()
-        self.commands["andrefq"]["skin"] = WelterSkin
+        self.commands["welterss"]["skin"] = WelterSkin
 
     def __getitem__(self, value: str):
         return self.commands[value]
