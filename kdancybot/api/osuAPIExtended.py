@@ -81,7 +81,7 @@ class osuAPIExtended(osuAPIv2):
             format_string = "({pp}pp for {acc})"
             data = {
                 "pp": int(pp_if_fc + 0.5),
-                "acc": self.build_acc_n_combo(0, 0, acc_if_fc / 100),
+                "acc": self.build_acc_n_combo(0, 0, acc_if_fc),
             }
             return format_string.format(**data)
 
