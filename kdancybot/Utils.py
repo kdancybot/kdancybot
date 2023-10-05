@@ -2,9 +2,9 @@ from rosu_pp_py import Beatmap, Calculator
 from datetime import datetime, timedelta, timezone
 import json
 import re
+import logging
 
-PP_RECORD = 1371
-DEFAULT_USER = "5199332"
+logger = logging.getLogger(__name__)
 
 Mods = {
     "NF": 1,
@@ -28,6 +28,12 @@ class Map:
         self.map_id = map_id
 
 
+class ScoresToOvertake:
+    def __init__(self, pp, count=1):
+        self.pp = pp
+        self.count = count
+
+
 def username_from_response(response):
     username = response["username"]
     return username + " (#" + str(response["statistics"]["global_rank"]) + ")"
@@ -39,34 +45,75 @@ def map_name_from_response(score_data):
     return f"{score_data['beatmapset']['artist']} - {score_data['beatmapset']['title']} [{beatmap['version']}]"
 
 
-def pp_to_overtake(top100, user_pp, goal_pp):
-    pp_value = -1
-    if user_pp >= goal_pp:
+# returns pp value which user would need to get to get `goal_pp` on `scores_count` scores
+def calculate_pp_values_to_overtake(pp_values: list, goal_pp, scores_count):
+    # since there's no way to get scores outside of top 100 and take them into account
+    # we clear space for `scores_count` plays to get 100 plays at most
+    weighted = calculate_weighted(pp_values)
+    weighted = weighted[: min(100 - scores_count, len(weighted))]
+    wsum = sum(weighted)
+    remainder = 0
+    for i in range(len(weighted) - 1, 0, -1):
+        wsum -= weighted[i]
+        remainder += 0.95**scores_count * weighted[i]
+        pp_needed = goal_pp - wsum - remainder
+        # partial sum of geometric series with length of `scores_count` and starting index of i
+        new_plays = pp_values[i - 1] * (1 - 0.95**scores_count) / (1 - 0.95)
+        new_plays_weighted = new_plays * 0.95**i
+        if new_plays_weighted > pp_needed:
+            logger.debug(
+                f"i: {i}, wsum: {wsum}, remainder: {remainder}, goal_pp: {goal_pp}, new_plays: {new_plays}, new_plays_weighted: {new_plays_weighted}"
+            )
+            return (pp_needed * (1 - 0.95) / (1 - 0.95**scores_count)) / 0.95**i
+    return (
+        (goal_pp - sum(weighted) * 0.95**scores_count)
+        * (1 - 0.95)
+        / (1 - 0.95**scores_count)
+    )
+
+
+def get_max_pp_value_for_scores_count(pp_value, count):
+    if count <= 1:
         return pp_value
+    if count <= 3:
+        return round_up_to_hundred(pp_value)
+    if count < 10:
+        return round_up_to_hundred((1 + 0.02 * count) * pp_value)
+    return round_up_to_hundred(1.2 * pp_value)
+
+
+# returns dict with "count" and "pp" keys if calculated successfully
+# returns dict with "error_code" and "error_desc" keys if calculation failed
+def pp_to_overtake(top100, user_pp, goal_pp):
+    if user_pp >= goal_pp:
+        return {"error_code": 1, "error_desc": "Goal pp is already reached by user"}
 
     pp_values = [score["pp"] for score in top100]
-    weighted = [0.95**i * pp_values[i] for i in range(len(pp_values))]
+    weighted = calculate_weighted(pp_values)
     wsum = sum(weighted)
     bonus_pp = user_pp - wsum
-    temp = pp_values
 
-    # if player gets pp record and still doesn't get goal pp
-    if wsum * 0.95 + bonus_pp + PP_RECORD < goal_pp:
-        return pp_value
+    # Here we make a guess that the highest pp score a player can get is
+    # their top play + 25% rounded up to next hundred
+    max_score_pp = round_up_to_hundred(pp_values[0] * 1.25)
 
-    # TODO: Rewrite loop so weighted doesn't get recalculated every cycle
-    for i in range(len(temp) - 1, 0, -1):
-        temp[i] = temp[i - 1]
-        weighted = [0.95**j * temp[j] for j in range(len(temp))]
-        wsum = sum(weighted)
-        if wsum + bonus_pp > goal_pp:
-            pp_value = temp[i] - (wsum + bonus_pp - goal_pp) / (0.95**i)
-            break
+    # if player gets 100 max_score_pp's and still doesn't get to goal pp
+    if max_score_pp * 20 + bonus_pp < goal_pp:
+        return {
+            "error_code": 2,
+            "error_desc": "User can't reach goal pp realistically",
+        }
 
-    # if player can get goal pp only by getting personal best
-    if pp_value == -1:
-        pp_value = temp[0] + (goal_pp - wsum - bonus_pp)
-    return pp_value
+    for i in range(1, 101):
+        predicted_pp = calculate_pp_values_to_overtake(pp_values, goal_pp - bonus_pp, i)
+        if predicted_pp <= get_max_pp_value_for_scores_count(pp_values[0], i):
+            logger.debug({"count": i, "pp": predicted_pp})
+            return {"count": i, "pp": predicted_pp}
+
+    return {
+        "error_code": 2,
+        "error_desc": "User can't reach goal pp realistically",
+    }
 
 
 def build_calculator(score_data):
@@ -158,9 +205,11 @@ def parse_beatmap_link(message):
         if result is not None:
             result = result.groupdict()
 
-            result['mods'] = re.sub(r"[^A-Za-z]", "", result.get('mods', "").upper())
-            result['mods'] = [result['mods'][i:i+2] for i in range(0, len(result['mods']), 2)]
-            result['mods'] = list(mod for mod in Mods.keys() if mod in result['mods'])
+            result["mods"] = re.sub(r"[^A-Za-z]", "", result.get("mods", "").upper())
+            result["mods"] = [
+                result["mods"][i : i + 2] for i in range(0, len(result["mods"]), 2)
+            ]
+            result["mods"] = list(mod for mod in Mods.keys() if mod in result["mods"])
             return result  # ["map_id"]
 
     return None
@@ -178,3 +227,15 @@ def upsert_scores(old_scores: list[Map], new_scores: list[Map]) -> list[Map]:
         if not updated:
             old_scores.append(score)
     return old_scores
+
+
+def get_bpm_multiplier(mods: list):
+    return 1.5 if ("DT" in mods) or ("NC" in mods) else 0.75 if "HT" in mods else 1
+
+
+def round_up_to_hundred(number):
+    return (1 + (int(number) // 100)) * 100
+
+
+def calculate_weighted(pp_values):
+    return [0.95**i * pp_values[i] for i in range(len(pp_values))]

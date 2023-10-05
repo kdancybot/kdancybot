@@ -47,10 +47,14 @@ class osuAPIv2:
 
     # Custom requests
 
+    def get_me(self, user):
+        endpoint = f"{Template.base}me"
+        response = self.get_request(endpoint, headers=self.api_headers())
+        return response
+
     def get_user_data(self, user):
         endpoint = f"{Template.users}{str(user)}/osu"
         response = self.get_request(endpoint, headers=self.api_headers())
-        # breakpoint()
         return response
 
     def get_map_data(self, id):
@@ -111,6 +115,7 @@ class osuAPIv2:
         if response.ok:
             chat = response.json()["channel"]
         return response
+
 
 class Template:
     base = "https://osu.ppy.sh/api/v2/"

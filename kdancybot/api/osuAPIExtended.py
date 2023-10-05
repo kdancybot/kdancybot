@@ -55,38 +55,73 @@ class osuAPIExtended(osuAPIv2):
         args["acc"] = acc
         return args
 
+    def build_acc_n_combo(self, combo, max_combo, acc, **kwargs):
+        if acc >= 100 and combo == max_combo:
+            return "SS"
+        else:
+            format_string = "{acc} {combo}"
+            data = {
+                "acc": f"{round(acc, 2)}%",
+                "combo": "FC" if combo == max_combo else f"{combo}/{max_combo}x",
+            }
+            return format_string.format(**data)
+
+    def build_misses(self, misses, **kwargs):
+        if misses == 0:
+            return ""
+        else:
+            format_string = "{misses}xMiss"
+            data = {"misses": misses}
+            return format_string.format(**data)
+
+    def build_pp_if_fc(self, acc_if_fc, pp_if_fc, combo, max_combo, misses, **kwargs):
+        if combo > max_combo - 10 and misses == 0:
+            return ""
+        else:
+            format_string = "({pp}pp for {acc})"
+            data = {
+                "pp": int(pp_if_fc + 0.5),
+                "acc": self.build_acc_n_combo(0, 0, acc_if_fc / 100),
+            }
+            return format_string.format(**data)
+
     def score_info_build(self, score_data, args, remove_https=False):
-        acc = args["acc"]
-        message_parts = [
-            self.map_info_build(score_data, args, remove_https),  # mods | None
-            f"{round(score_data['accuracy'] * 100, 2)}%",  # accuracy
-            f"{score_data['max_combo']}/{args['max_combo']}x"  # combo or "FC"
-            if args["max_combo"] != score_data["max_combo"]
-            else "FC",
-            f"{score_data['statistics']['count_miss']}xMiss"  # misses | None
-            if score_data["statistics"]["count_miss"]
+        format_string = (
+            "{map_info} {acc_n_combo} {misses} {pp} {pp_if_fc} {if_ranked} {score_age}"
+        )
+        data = {
+            "combo": score_data["max_combo"],
+            "max_combo": args["max_combo"],
+            "acc": score_data["accuracy"] * 100,
+            "pp": score_data["pp"] if score_data["pp"] else args["curr_perf"].pp,
+            "misses": score_data["statistics"]["count_miss"],
+            "acc_if_fc": args["acc"],
+            "pp_if_fc": args["perf"].pp,
+            "status": score_data["beatmap"]["status"],
+            "created_at": score_data["created_at"],
+        }
+        parts = {
+            "map_info": self.map_info_build(score_data, args, remove_https),
+            "acc_n_combo": self.build_acc_n_combo(**data),
+            "misses": self.build_misses(**data),
+            "pp": f"{int(data['pp'] + .5)}pp",
+            "pp_if_fc": self.build_pp_if_fc(**data),
+            "if_ranked": "if ranked"
+            if data["status"] not in ["ranked", "approved"]
             else "",
-            f"{int((score_data['pp'] if score_data['pp'] else args['curr_perf'].pp) + .5)}pp",
-            f"({int(args['perf'].pp + 0.5)}pp for {f'{round(acc, 2)}% FC' if acc != 100 else 'SS'})"
-            if args["max_combo"] >= score_data["max_combo"] + 10
-            or score_data["statistics"]["count_miss"]
-            else "",
-            "if ranked" if score_data["beatmap"]["status"] != "ranked" else "",
-            f"{score_age(score_data['created_at'])} ago",
-        ]
-        # message = message.replace('"', "")
-        message = " ".join([part for part in message_parts if part])
-        return message
+            "score_age": f"{score_age(data['created_at'])} ago",
+        }
+        return format_string.format(**parts)
 
     def map_info_build(self, score_data, args, remove_https=False):
-        message_parts = [
-            f"{'https://' if not remove_https else ''}osu.ppy.sh/b/{score_data['beatmap']['id']}",  # map link
-            map_name_from_response(score_data),  # map name
-            f"{round(args['star_rating'], 2)}*",  # star rating
-            generate_mods_string(score_data["mods"]),
-        ]
-        message = " ".join([part for part in message_parts if part])
-        return message
+        format_string = "{link} {map_name} {star_rating} {mods}"
+        data = {
+            "link": f"{'https://' if not remove_https else ''}osu.ppy.sh/b/{score_data['beatmap']['id']}",
+            "map_name": map_name_from_response(score_data),
+            "star_rating": f"{round(args['star_rating'], 2)}*",
+            "mods": generate_mods_string(score_data["mods"]),
+        }
+        return format_string.format(**data)
 
     def recent(self, args: dict):
         # data = dict()

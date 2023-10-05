@@ -69,15 +69,17 @@ class Commands:
         return message
 
     def message_to_overtake(self, user_data, other_data):
+        format_string = "{username} needs to get {count} {pp}pp play{'s' if count > 1 else ''} to overtake {other_data['username']}"
         user_pp = user_data["statistics"]["pp"]
         goal_pp = other_data["statistics"]["pp"]
         top100 = self.osu.get_top_100(user_data["id"]).json()
-        pp_value = pp_to_overtake(top100, user_pp, goal_pp)
+        scores = pp_to_overtake(top100, user_pp, goal_pp)
 
-        if pp_value < 0:
+        if scores.get("error_code", 0):
             return ""
+        count = scores["count"]
 
-        return f"{user_data['username']} needs to get a {int(pp_value + .5)}pp play to overtake {other_data['username']}"
+        return f"{user_data['username']} needs to get {count if count > 1 else 'a'} {int(scores['pp'] + .5)}pp play{'s' if count > 1 else ''} to overtake {other_data['username']}"
 
     def ppdiff(self, request):
         message = ""
@@ -95,7 +97,6 @@ class Commands:
         args = Parsing.Recent(request.arguments)
         if not args.get("username"):
             args["username"] = self.users.get(request.channel)
-        # message = ""
 
         args = self.osu.recent(args)
         if args["invalid_username"]:
@@ -104,7 +105,6 @@ class Commands:
         if args["no_scores_today"]:
             return f"No scores for {args['username_rank']} in last 24 hours"
 
-        # score_data = recent_score.json()[args["actual_index"] - 1]
         message = self.score_info(
             args["score_data"],
             remove_https=request.channel in self.config["ignore_requests"].keys(),
@@ -115,7 +115,6 @@ class Commands:
         args = Parsing.Recent(request.arguments)
         if not args.get("username"):
             args["username"] = self.users.get(request.channel)
-        # message = ""
 
         args = self.osu.recent(args)
         if args["invalid_username"]:
@@ -124,7 +123,6 @@ class Commands:
         if args["no_scores_today"]:
             return f"No scores for {args['username_rank']} in last 24 hours"
 
-        # score_data = recent_score.json()[args["actual_index"] - 1]
         message = self.map_info(
             args["score_data"],
             remove_https=request.channel in self.config["ignore_requests"].keys(),
@@ -147,9 +145,9 @@ class Commands:
         full_pp = user_data["statistics"]["pp"]
         top100 = self.osu.get_top_100(user_data["id"]).json()
         if len(top100) == 0:
-            return "No scores for " + username + " in last 24 hours Sadge"
+            return f"No scores for {username} in last 24 hours Sadge"
         if len(top100) < args["index"] and args["index"] != 1:
-            message += "Requested place unavailable, falling back to #1. "
+            # message += "Requested place unavailable, falling back to #1. "
             args["index"] = 1
         score_data = top100[args["index"] - 1]
 
@@ -188,7 +186,7 @@ class Commands:
         wsum = sum(weighted)
         new_pp = wsum + bonus_pp
 
-        message = "Prayge If " + user_data["username"] + " gets "
+        message = f"Prayge If {user_data['username']} gets "
         message += f"{args['count']} " if args["count"] > 1 else ""
         message += f"{round(args['pp'], 1)}pp score{'s' if args['count'] > 1 else ''}"
         if args["map_id"] > 0:
@@ -203,6 +201,7 @@ class Commands:
         return message
 
     def recentbest(self, request):
+        format_string = "Latest top score #{index} for {username}: {score_data}"
         args = Parsing.Top(request.arguments)
         if not args.get("username"):
             args["username"] = self.users.get(request.channel)
@@ -236,21 +235,24 @@ class Commands:
             if top100[i]["beatmap"]["id"] == score_data["beatmap"]["id"]
         )
 
-        message += "Latest top score #" + str(index) + " for " + username + ": "
-        message += self.score_info(
-            score_data,
-            remove_https=(request.channel in self.config["ignore_requests"].keys()),
-        )
-        return message
+        data = {
+            "index": index,
+            "username": username,
+            "score_data": self.score_info(
+                score_data,
+                remove_https=(request.channel in self.config["ignore_requests"].keys()),
+            ),
+        }
+        return format_string.format(**data)
 
     def todaybest(self, request):
+        format_string = "Today's score #{index} for {username}: {score_data}"
         args = Parsing.Top(request.arguments)
         if not args.get("username"):
             args["username"] = self.users.get(request.channel)
         if not args.get("index"):
             args["index"] = 1
 
-        message = ""
         user_data = self.osu.get_user_data(args["username"])
         if not user_data.ok:
             return "Who is this Concerned"
@@ -265,14 +267,22 @@ class Commands:
         if len(recent_plays) == 0:
             return "No scores for " + username + " in last 24 hours Sadge"
         if len(recent_plays) < args["index"] and args["index"] != 1:
-            message += (
-                "Requested place unavailable, falling back to best score of the day. "
-            )
+            # message += (
+            #     "Requested place unavailable, falling back to best score of the day. "
+            # )
             args["index"] = 1
         score_data = recent_plays[args["index"] - 1]
 
-        message += f"Today's score #{args['index']} for {username}: {self.score_info(score_data, remove_https=(request.channel in self.config['ignore_requests'].keys()))}"
-        return message
+        data = {
+            "index": args["index"],
+            "username": username,
+            "score_data": self.score_info(
+                score_data,
+                remove_https=(request.channel in self.config["ignore_requests"].keys()),
+            ),
+        }
+
+        return format_string.format(**data)
 
     def ppcounter(self, request):
         return "not implenented PEEPEES"
@@ -316,16 +326,7 @@ class Commands:
         ).json()["attributes"]
         if beatmap.ok:
             bpm = int(
-                (
-                    beatmap.json().get("bpm", 0)
-                    * (
-                        1.5
-                        if ("DT" in map_info["mods"]) or ("NC" in map_info["mods"])
-                        else 0.75
-                        if "HT" in map_info["mods"]
-                        else 1
-                    )
-                )
+                beatmap.json().get("bpm", 0) * get_bpm_multiplier(map_info["mods"])
                 + 0.5
             )
             mods = f"{'+' if map_info['mods'] else ''}{''.join(map_info['mods'])}"
