@@ -16,18 +16,30 @@ class osuAPIExtended(osuAPIv2):
                 map_data = file.read()
         else:
             map_data = self.get_map_data(str(map_id)).content
-            os.makedirs(self.config["map"]["folder"], exist_ok=True)
-            with open(map_path, "wb") as file:
-                file.write(map_data)
+            if self.get_beatmap(map_id).json()["status"].lower() in [
+                "ranked",
+                "approved",
+                "loved",
+            ]:
+                os.makedirs(self.config["map"]["folder"], exist_ok=True)
+                with open(map_path, "wb") as file:
+                    file.write(map_data)
         return map_data
 
     def prepare_score_info(self, score_data):
         args = dict()
 
-        beatmap_attributes = self.get_beatmap_attributes(
+        response = self.get_beatmap_attributes(
             score_data["beatmap"]["id"], generate_mods_payload(score_data["mods"])
-        ).json()["attributes"]
+        )
 
+        beatmap_attributes = response.json()["attributes"]
+
+        max_combo = beatmap_attributes.get("max_combo", 0)
+        if max_combo <= 0:
+            max_combo = self.get_beatmap(score_data["beatmap"]["id"]).json()[
+                "max_combo"
+            ]
         map_data = self.map_data(str(score_data["beatmap"]["id"]))
         objects_passed = get_passed_objects(score_data)
         all_objects = get_objects_count(score_data)
@@ -45,10 +57,10 @@ class osuAPIExtended(osuAPIv2):
         calc.set_n100(n100)
         calc.set_n50(n50)
         calc.set_n_misses(0)
-        calc.set_combo(beatmap_attributes["max_combo"])
+        calc.set_combo(max_combo)
         perf = calc.performance(beatmap)
 
-        args["max_combo"] = beatmap_attributes["max_combo"]
+        args["max_combo"] = max_combo
         args["star_rating"] = beatmap_attributes["star_rating"]
         args["curr_perf"] = curr_perf
         args["perf"] = perf
