@@ -29,14 +29,13 @@ class osuAPIExtended(osuAPIv2):
     def prepare_score_info(self, score_data):
         args = dict()
 
-        response = self.get_beatmap_attributes(
-            score_data["beatmap"]["id"], generate_mods_payload(score_data["mods"])
-        )
+        if not score_data.get("attributes"):
+            score_data["attributes"] = self.get_beatmap_attributes(
+                score_data["beatmap"]["id"], generate_mods_payload(score_data["mods"])
+            ).json()["attributes"]
 
-        beatmap_attributes = response.json()["attributes"]
-
-        max_combo = beatmap_attributes.get("max_combo", 0)
-        if max_combo <= 0:
+        max_combo = score_data["attributes"].get("max_combo")
+        if not max_combo:
             max_combo = self.get_beatmap(score_data["beatmap"]["id"]).json()[
                 "max_combo"
             ]
@@ -61,7 +60,7 @@ class osuAPIExtended(osuAPIv2):
         perf = calc.performance(beatmap)
 
         args["max_combo"] = max_combo
-        args["star_rating"] = beatmap_attributes["star_rating"]
+        args["star_rating"] = score_data["attributes"]["star_rating"]
         args["curr_perf"] = curr_perf
         args["perf"] = perf
         args["acc"] = acc
@@ -113,7 +112,7 @@ class osuAPIExtended(osuAPIv2):
             "created_at": score_data["created_at"],
         }
         parts = {
-            "map_info": self.map_info_build(score_data, args, remove_https),
+            "map_info": self.map_info_build(score_data, remove_https),
             "acc_n_combo": self.build_acc_n_combo(**data),
             "misses": self.build_misses(**data),
             "pp": f"{int(data['pp'] + .5)}pp",
@@ -125,12 +124,17 @@ class osuAPIExtended(osuAPIv2):
         }
         return format_string.format(**parts)
 
-    def map_info_build(self, score_data, args, remove_https=False):
+    def map_info_build(self, score_data, remove_https=False):
         format_string = "{link} {map_name} {star_rating} {mods}"
+        link = ""
+        if score_data['beatmap'].get('id'):
+            link = f"{'https://' if not remove_https else ''}osu.ppy.sh/b/{score_data['beatmap'].get('id')}"
+        elif score_data.get('beatmapset', {}).get('id'):
+            link = f"{'https://' if not remove_https else ''}osu.ppy.sh/beatmapsets/{score_data['beatmapset'].get('id')}"
         data = {
-            "link": f"{'https://' if not remove_https else ''}osu.ppy.sh/b/{score_data['beatmap']['id']}",
+            "link": link,
             "map_name": map_name_from_response(score_data),
-            "star_rating": f"{round(args['star_rating'], 2)}*",
+            "star_rating": f"{round(score_data['attributes']['star_rating'], 2)}*",
             "mods": generate_mods_string(score_data["mods"]),
         }
         return format_string.format(**data)
@@ -156,4 +160,8 @@ class osuAPIExtended(osuAPIv2):
                     args["index_too_big"] = True
                     args["index"] = 1
                 args["score_data"] = recent_score.json()[args["index"] - 1]
+                args["score_data"]["attributes"] = self.get_beatmap_attributes(
+                    args["score_data"]["beatmap"]["id"], 
+                    generate_mods_payload(args["score_data"]["mods"])
+                ).json()["attributes"]
         return args

@@ -36,7 +36,7 @@ class Parsing:
     class MapID:
         def Is(token: str):
             try:
-                return 2000 < int(token) <= 5000000
+                return 0000 < int(token) <= 5000000
             except ValueError:
                 return False
 
@@ -125,40 +125,63 @@ class Parsing:
 
         arguments["count"] = 1
         arguments["map_id"] = 0
+        arguments["username"] = kwargs.get("username", "")
 
-        if tokens:
-            if "--recent-fc" in tokens and osu:
-                tokens.remove("--recent-fc")
-                recent_args = Parsing.Recent(tokens)
-                recent_args["username"] = kwargs.get("username")
-                arguments["recent"] = osu.recent(recent_args)
-                arguments["map_id"] = arguments["recent"]["score_data"]["beatmap"]["id"]
-                arguments["pp"] = osu.prepare_score_info(
-                    arguments["recent"]["score_data"]
-                )["perf"].pp
+        # types ordered in size of sets
+        # pp completely includes count, and map_id includes pp
+        ordered_types = ["count", "pp", "map_id"]
+        types = {
+            "count": Parsing.Index,
+            "pp": Parsing.PPValue,
+            "map_id": Parsing.MapID,
+        }
+        for arg_type in ordered_types:
+            for i in range(len(tokens)):
+                if types[arg_type].Is(tokens[i]):
+                    arguments[arg_type] = types[arg_type].Value(tokens[i])
+                    tokens.pop(i)
+                    break
 
-            elif len(tokens) == 1:
-                if Parsing.PPValue.Is(tokens[0]):
-                    arguments["pp"] = Parsing.PPValue.Value(tokens[0])
+        if Parsing.Username.Is(tokens):
+            arguments["username"] = Parsing.Username.Value(tokens)
 
-            elif len(tokens) <= 2:
-                if len(tokens) == 1 and Parsing.PPValue.Is(tokens[0]):
-                    arguments["pp"] = Parsing.PPValue.Value(tokens[0])
-                else:
-                    for _ in range(2):
-                        if Parsing.PPValue.Is(tokens[0]):
-                            arguments["pp"] = Parsing.PPValue.Value(tokens[0])
-                            if Parsing.Count.Is(tokens[1]):
-                                arguments["count"] = Parsing.Count.Value(tokens[1])
-                            elif Parsing.MapID.Is(tokens[1]):
-                                arguments["map_id"] = Parsing.MapID.Value(tokens[1])
-                            else:
-                                tokens[0], tokens[1] = tokens[1], tokens[0]
-                                continue
-                            break
-                        else:
-                            tokens[0], tokens[1] = tokens[1], tokens[0]
-                            continue
+        # if `count` changed and `pp` is not set, it means value that should've went to `pp` went to `count`
+        if arguments["count"] > 1 and not arguments.get("pp", ""):
+            arguments["pp"] = arguments["count"]
+            arguments["count"] = 1
+
+        # if tokens:
+        #     if "--recent-fc" in tokens and osu:
+        #         tokens.remove("--recent-fc")
+        #         recent_args = Parsing.Recent(tokens)
+        #         recent_args["username"] = kwargs.get("username")
+        #         arguments["recent"] = osu.recent(recent_args)
+        #         arguments["map_id"] = arguments["recent"]["score_data"]["beatmap"]["id"]
+        #         arguments["pp"] = osu.prepare_score_info(
+        #             arguments["recent"]["score_data"]
+        #         )["perf"].pp
+
+        #     elif len(tokens) == 1:
+        #         if Parsing.PPValue.Is(tokens[0]):
+        #             arguments["pp"] = Parsing.PPValue.Value(tokens[0])
+
+        #     else:
+        #         for _ in range(2):
+        #             if Parsing.PPValue.Is(tokens[0]):
+        #                 arguments["pp"] = Parsing.PPValue.Value(tokens[0])
+        #                 if Parsing.Count.Is(tokens[1]):
+        #                     arguments["count"] = Parsing.Count.Value(tokens[1])
+        #                 elif Parsing.MapID.Is(tokens[1]):
+        #                     arguments["map_id"] = Parsing.MapID.Value(tokens[1])
+        #                 elif Parsing.Username.Is(tokens[1:]):
+        #                     arguments["username"] = Parsing.Username.Value(tokens[1:])
+        #                 else:
+        #                     tokens[0], tokens[1] = tokens[1], tokens[0]
+        #                     continue
+        #                 break
+        #             else:
+        #                 tokens[0], tokens[1] = tokens[1], tokens[0]
+        #                 continue
         return arguments
 
     def PP(tokens: list, osu=None, **kwargs):

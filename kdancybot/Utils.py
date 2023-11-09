@@ -88,6 +88,9 @@ def pp_to_overtake(top100, user_pp, goal_pp):
     if user_pp >= goal_pp:
         return {"error_code": 1, "error_desc": "Goal pp is already reached by user"}
 
+    if len(top100) == 0:
+        return {"error_code": 3, "error_desc": "User has no scores"}
+
     pp_values = [score["pp"] for score in top100]
     weighted = calculate_weighted(pp_values)
     wsum = sum(weighted)
@@ -239,3 +242,21 @@ def round_up_to_hundred(number):
 
 def calculate_weighted(pp_values):
     return [0.95**i * pp_values[i] for i in range(len(pp_values))]
+
+
+def convert_np_response_to_score_data(response):
+    return {
+        "attributes": {
+            "star_rating": response["menu"]["bm"]["stats"]["fullSR"],
+        },
+        "beatmap": {
+            "id": response["menu"]["bm"]["id"],
+            "version": response["menu"]["bm"]["metadata"]["difficulty"],
+        },
+        "beatmapset": {
+            "id": response["menu"]["bm"]["set"],
+            "artist": response["menu"]["bm"]["metadata"]["artist"],
+            "title": response["menu"]["bm"]["metadata"]["title"],
+        },
+        "mods": response["menu"]["mods"]["str"],
+    }

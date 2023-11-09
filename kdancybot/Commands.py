@@ -1,7 +1,9 @@
 from kdancybot.Utils import *
 import kdancybot.api.osuAPIExtended
+import kdancybot.api.np
 from kdancybot.Message import Message
 from kdancybot.Parsing import Parsing
+from kdancybot.db.Models import Twitch
 
 import re
 from rosu_pp_py import Beatmap, Calculator
@@ -19,15 +21,14 @@ class Commands:
     def __init__(self, config):
         self.osu = kdancybot.api.osuAPIExtended.osuAPIExtended(config)
         self.config = config
-        self.users = config["users"]
+        self.users = Twitch.GetUsersDict()
 
     def score_info(self, score_data, remove_https=False):
         args = self.osu.prepare_score_info(score_data)
         return self.osu.score_info_build(score_data, args, remove_https)
 
     def map_info(self, score_data, remove_https=False):
-        args = self.osu.prepare_score_info(score_data)
-        return self.osu.map_info_build(score_data, args, remove_https)
+        return self.osu.map_info_build(score_data, remove_https)
 
     # def get_user_pair(lhs: str, rhs: str):
     #     tasks = [asyncio.ensure_future(get_user_data(u)) for u in [lhs, rhs]]
@@ -129,6 +130,21 @@ class Commands:
         )
         return message
 
+    def now_playing(self, request):
+        try:
+            response = kdancybot.api.np.NPClient.get_np(request.channel).json()
+        except Exception:
+            return self.recent_played(request)
+
+        print(response)
+        score_data = convert_np_response_to_score_data(response)
+
+        message = self.map_info(
+            score_data,
+            remove_https=request.channel in self.config["ignore_requests"].keys(),
+        )
+        return message
+
     def top(self, request):
         args = Parsing.Top(request.arguments)
         if not args.get("username"):
@@ -219,7 +235,7 @@ class Commands:
         top100 = self.osu.get_top_100(user_data["id"]).json()
 
         if len(top100) == 0:
-            return "Bro's profile is wiped Sadge"
+            return "Profile is nonexistent Sadge"
         elif len(top100) < args["index"] and args["index"] != 1:
             args["index"] = 1
 
@@ -345,6 +361,7 @@ class Commands:
             return f"{request.user} sent request: {map_name} {mods}"
         else:
             return "Seems like beatmap does not exist, are you sure dogQ"
+
 
 
 # regex for commands - '!command_name($| .*)'
