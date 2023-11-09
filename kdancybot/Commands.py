@@ -134,6 +134,7 @@ class Commands:
         try:
             response = kdancybot.api.np.NPClient.get_np(request.channel).json()
             if response.get("error"):
+                logger.info("NP: error from server for user {}: {}".format(request.channel, response))
                 raise Exception()
         except Exception:
             return self.recent_played(request)
@@ -162,7 +163,7 @@ class Commands:
         full_pp = user_data["statistics"]["pp"]
         top100 = self.osu.get_top_100(user_data["id"]).json()
         if len(top100) == 0:
-            return f"No scores for {username} in last 24 hours Sadge"
+            return f"No scores for {username} in last 24 hours"
         if len(top100) < args["index"] and args["index"] != 1:
             # message += "Requested place unavailable, falling back to #1. "
             args["index"] = 1

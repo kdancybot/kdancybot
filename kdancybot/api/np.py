@@ -18,8 +18,11 @@ class NPClient:
         logger.debug(
             f"Requesting with {http_method} method from {url} with kwargs: {kwargs}"
         )
-        r = requests.request(http_method, url, headers=headers, data=data)  # .json()
-        logger.debug(f"Got {r.status_code} code")
+        try:
+            r = requests.request(http_method, url, headers=headers, data=data, timeout=3)  # .json()
+            logger.debug(f"Got {r.status_code} code")
+        except ConnectTimeout:
+            return {"error": "Response timeout"}
         return r
 
     def api_request(endpoint: str, http_method: str, **kwargs):
