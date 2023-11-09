@@ -3,7 +3,7 @@ import kdancybot.api.osuAPIExtended
 import kdancybot.api.np
 from kdancybot.Message import Message
 from kdancybot.Parsing import Parsing
-from kdancybot.db.Models import Twitch
+from kdancybot.db.Models import Twitch, Settings
 
 import re
 from rosu_pp_py import Beatmap, Calculator
@@ -108,7 +108,7 @@ class Commands:
 
         message = self.score_info(
             args["score_data"],
-            remove_https=request.channel in self.config["ignore_requests"].keys(),
+            remove_https=Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
         )
         return message
 
@@ -126,7 +126,7 @@ class Commands:
 
         message = self.map_info(
             args["score_data"],
-            remove_https=request.channel in self.config["ignore_requests"].keys(),
+            remove_https=Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
         )
         return message
 
@@ -136,12 +136,11 @@ class Commands:
         except Exception:
             return self.recent_played(request)
 
-        print(response)
         score_data = convert_np_response_to_score_data(response)
 
         message = self.map_info(
             score_data,
-            remove_https=request.channel in self.config["ignore_requests"].keys(),
+            remove_https=Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
         )
         return message
 
@@ -170,7 +169,7 @@ class Commands:
         message += f"{ordinal(args['index'])} top score for {username}: "
         message += self.score_info(
             score_data,
-            remove_https=(request.channel in self.config["ignore_requests"].keys()),
+            remove_https=Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
         )
         return message
 
@@ -256,7 +255,7 @@ class Commands:
             "username": username,
             "score_data": self.score_info(
                 score_data,
-                remove_https=(request.channel in self.config["ignore_requests"].keys()),
+                remove_https=Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
             ),
         }
         return format_string.format(**data)
@@ -294,7 +293,7 @@ class Commands:
             "username": username,
             "score_data": self.score_info(
                 score_data,
-                remove_https=(request.channel in self.config["ignore_requests"].keys()),
+                remove_https=Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
             ),
         }
 

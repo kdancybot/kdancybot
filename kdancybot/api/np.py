@@ -18,7 +18,6 @@ class NPClient:
         logger.debug(
             f"Requesting with {http_method} method from {url} with kwargs: {kwargs}"
         )
-        print 
         r = requests.request(http_method, url, headers=headers, data=data)  # .json()
         logger.debug(f"Got {r.status_code} code")
         return r

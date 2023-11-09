@@ -9,8 +9,6 @@ class Timer:
         self.paused = True
 
     def resume(self, message: kdancybot.Message.Message):
-        print(message.user, "|")
-        print(message.channel, "|")
         if self.paused and (
             message.user == message.channel or int(message.tags.get("mod"))
         ):
