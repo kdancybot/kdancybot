@@ -133,6 +133,8 @@ class Commands:
     def now_playing(self, request):
         try:
             response = kdancybot.api.np.NPClient.get_np(request.channel).json()
+            if response.get("error"):
+                raise Exception()
         except Exception:
             return self.recent_played(request)
 
