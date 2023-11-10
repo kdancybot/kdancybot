@@ -108,7 +108,7 @@ class Commands:
 
         message = self.score_info(
             args["score_data"],
-            remove_https=Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+            remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
         )
         return message
 
@@ -126,7 +126,7 @@ class Commands:
 
         message = self.map_info(
             args["score_data"],
-            remove_https=Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+            remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
         )
         return message
 
@@ -143,7 +143,7 @@ class Commands:
 
         message = self.map_info(
             score_data,
-            remove_https=Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+            remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
         )
         return message
 
@@ -172,7 +172,7 @@ class Commands:
         message += f"{ordinal(args['index'])} top score for {username}: "
         message += self.score_info(
             score_data,
-            remove_https=Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+            remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
         )
         return message
 
@@ -258,7 +258,7 @@ class Commands:
             "username": username,
             "score_data": self.score_info(
                 score_data,
-                remove_https=Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+                remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
             ),
         }
         return format_string.format(**data)
@@ -296,7 +296,7 @@ class Commands:
             "username": username,
             "score_data": self.score_info(
                 score_data,
-                remove_https=Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+                remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
             ),
         }
 
