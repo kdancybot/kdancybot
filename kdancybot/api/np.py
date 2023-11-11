@@ -42,7 +42,9 @@ class NPClient:
         return response
 
     def get_np(client):
-        return NPClient.send_command(client, "np")
+        data = NPClient.send_command(client, "np")
+        data.encoding = 'utf-8-sig'
+        return data
 
 
 class Template:

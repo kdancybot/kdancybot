@@ -136,7 +136,8 @@ class Commands:
             if response.get("error"):
                 logger.info("NP: error from server for user {}: {}".format(request.channel, response))
                 raise Exception()
-        except Exception:
+        except Exception as e:
+            logger.info(str(e))
             return self.recent_played(request)
 
         score_data = convert_np_response_to_score_data(response)
