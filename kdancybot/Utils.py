@@ -243,8 +243,8 @@ def round_up_to_hundred(number):
 def calculate_weighted(pp_values):
     return [0.95**i * pp_values[i] for i in range(len(pp_values))]
 
-
-def convert_np_response_to_score_data(response):
+# gosumemory
+def convert_gm_response_to_score_data(response):
     return {
         "attributes": {
             "star_rating": response["menu"]["bm"]["stats"]["fullSR"],
@@ -260,3 +260,31 @@ def convert_np_response_to_score_data(response):
         },
         "mods": response["menu"]["mods"]["str"],
     }
+
+
+# stream companion
+def convert_sc_response_to_score_data(response):
+    mods = "" if response["mods"] == "None" else "".join(response["mods"].split(","))
+    return {
+        "attributes": {
+            "star_rating": response["mStars"],
+        },
+        "beatmap": {
+            "id": response["mapid"],
+            "version": response["diffName"],
+        },
+        "beatmapset": {
+            "id": response["mapsetid"],
+            "artist": response["artistRoman"],
+            "title": response["titleRoman"],
+        },
+        "mods": mods,
+    }
+
+
+# Two random identifying keys
+def convert_np_response_to_score_data(response):
+    if "menu" in response.keys():
+        return convert_gm_response_to_score_data(response)
+    elif "score" in response.keys():
+        return convert_sc_response_to_score_data(response)
