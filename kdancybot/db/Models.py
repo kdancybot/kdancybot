@@ -1,4 +1,5 @@
 import configparser
+from playhouse.shortcuts import ReconnectMixin
 from peewee import (
     Model,
     MySQLDatabase,
@@ -11,6 +12,10 @@ from peewee import (
     fn,
 )
 
+class ReconnectMySQLDatabase(ReconnectMixin, MySQLDatabase):
+    pass
+
+
 config = configparser.ConfigParser()
 config.read("config.ini")
 
@@ -21,13 +26,12 @@ password = config.get("db", "password")
 host = config.get("db", "host")
 
 # Replace these with your MySQL connection details
-db = MySQLDatabase(
+db = ReconnectMySQLDatabase(
     database_name,
     user=user,
     password=password,
     host=host,
 )
-
 
 class Twitch(Model):
     id = IntegerField(primary_key=True)
