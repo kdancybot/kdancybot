@@ -46,6 +46,7 @@ class TwitchChatHandler:
             "top": self.commands.top,
             "profile": self.commands.profile,
             "np": self.commands.now_playing,
+            "nppp": self.commands.now_playing_pp,
             "к": self.commands.recent,
             "ки": self.commands.recentbest,
             "еи": self.commands.todaybest,

@@ -24,8 +24,8 @@ class Commands:
         self.users = Twitch.GetUsersDict()
 
     def score_info(self, score_data, remove_https=False):
-        args = self.osu.prepare_score_info(score_data)
-        return self.osu.score_info_build(score_data, args, remove_https)
+        score_data["args"] = self.osu.prepare_score_info(score_data)
+        return self.osu.score_info_build(score_data, remove_https)
 
     def map_info(self, score_data, remove_https=False):
         return self.osu.map_info_build(score_data, remove_https)
@@ -143,6 +143,24 @@ class Commands:
         score_data = convert_np_response_to_score_data(response)
 
         message = self.map_info(
+            score_data,
+            remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+        )
+        return message
+
+    def now_playing_pp(self, request):
+        try:
+            response = kdancybot.api.np.NPClient.get_np(request.channel).json()
+            if response.get("error"):
+                logger.info("NP: error from server for user {}: {}".format(request.channel, response))
+                raise Exception()
+        except Exception as e:
+            logger.info(str(e))
+            return ""
+
+        score_data = convert_np_response_to_score_data(response)
+
+        message = self.score_info(
             score_data,
             remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
         )

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 import json
 import re
 import logging
+from math import ceil
 
 logger = logging.getLogger(__name__)
 
@@ -173,19 +174,22 @@ def ordinal(n: int):
 
 
 def score_age(date: str) -> str:
-    magnitudes = ["y", "mth", "d", "h", "min", "s"]
-    diff = datetime.now(timezone.utc) - datetime.strptime(date, "%Y-%m-%dT%H:%M:%S%z")
-    orders = [
-        diff.days // 365,
-        diff.days // 30,
-        diff.days,
-        diff.seconds // 3600,
-        diff.seconds // 60,
-        diff.seconds,
-    ]
-    for i in range(len(orders)):
-        if orders[i] > 0:
-            return f"{orders[i]}{magnitudes[i]}"
+    try:
+        magnitudes = ["y", "mth", "d", "h", "min", "s"]
+        diff = datetime.now(timezone.utc) - datetime.strptime(date, "%Y-%m-%dT%H:%M:%S%z")
+        orders = [
+            diff.days // 365,
+            diff.days // 30,
+            diff.days,
+            diff.seconds // 3600,
+            diff.seconds // 60,
+            diff.seconds,
+        ]
+        for i in range(len(orders)):
+            if orders[i] > 0:
+                return f"{orders[i]}{magnitudes[i]} ago"
+    except Exception:
+        pass
     return ""
 
 
@@ -243,22 +247,42 @@ def round_up_to_hundred(number):
 def calculate_weighted(pp_values):
     return [0.95**i * pp_values[i] for i in range(len(pp_values))]
 
+def gm_get_acc_and_pp_for_fc(response):
+    acc = max(ceil(response["gameplay"]["accuracy"]), 95)
+    return acc, response["menu"]["pp"][str(acc)]
+
 # gosumemory
 def convert_gm_response_to_score_data(response):
+    acc, pp = gm_get_acc_and_pp_for_fc(response)
     return {
+        "accuracy": response["gameplay"]["accuracy"],
+        "args": {
+            "max_combo": 0, # currently no way to get map's combo from json
+            "pp": response["gameplay"]["pp"]["current"],
+            "acc_for_fc": acc,
+            "pp_for_fc": pp
+        },
         "attributes": {
             "star_rating": response["menu"]["bm"]["stats"]["fullSR"],
         },
         "beatmap": {
             "id": response["menu"]["bm"]["id"],
             "version": response["menu"]["bm"]["metadata"]["difficulty"],
+            "status": "ranked"
         },
         "beatmapset": {
             "id": response["menu"]["bm"]["set"],
             "artist": response["menu"]["bm"]["metadata"]["artist"],
             "title": response["menu"]["bm"]["metadata"]["title"],
         },
+        "created_at": "None",
+        "max_combo": response["gameplay"]["combo"]["max"],
         "mods": response["menu"]["mods"]["str"],
+        "statistics": {
+            "count_miss": response["gameplay"]["hiis"]["0"],
+        },
+        "pp": pp,
+
     }
 
 

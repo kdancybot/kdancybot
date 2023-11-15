@@ -36,9 +36,14 @@ class osuAPIExtended(osuAPIv2):
 
         max_combo = score_data["attributes"].get("max_combo")
         if not max_combo:
-            max_combo = self.get_beatmap(score_data["beatmap"]["id"]).json()[
-                "max_combo"
-            ]
+            try:
+                max_combo = self.get_beatmap(
+                    score_data["beatmap"]["id"]
+                ).json()[
+                    "max_combo"
+                ]
+            except Exception:
+                pass
         map_data = self.map_data(str(score_data["beatmap"]["id"]))
         objects_passed = get_passed_objects(score_data)
         all_objects = get_objects_count(score_data)
@@ -61,9 +66,9 @@ class osuAPIExtended(osuAPIv2):
 
         args["max_combo"] = max_combo
         args["star_rating"] = score_data["attributes"]["star_rating"]
-        args["curr_perf"] = curr_perf
-        args["perf"] = perf
-        args["acc"] = acc
+        args["pp"] = curr_perf.pp
+        args["pp_for_fc"] = perf.pp
+        args["acc_for_fc"] = acc
         return args
 
     def build_acc_n_combo(self, combo, max_combo, acc, **kwargs):
@@ -73,7 +78,10 @@ class osuAPIExtended(osuAPIv2):
             format_string = "{acc} {combo}"
             data = {
                 "acc": f"{round(acc, 2)}%",
-                "combo": "FC" if combo == max_combo else f"{combo}/{max_combo}x",
+                "combo": (
+                    "FC" if combo == max_combo else 
+                    f"{combo}x" if combo > max_combo # if for some reason we get max_combo lower than combo we w
+                    else f"{combo}/{max_combo}x"),
             }
             return format_string.format(**data)
 
@@ -96,18 +104,18 @@ class osuAPIExtended(osuAPIv2):
             }
             return format_string.format(**data)
 
-    def score_info_build(self, score_data, args, remove_https=False):
+    def score_info_build(self, score_data, remove_https=False):
         format_string = (
             "{map_info} {acc_n_combo} {misses} {pp} {pp_if_fc} {if_ranked} {score_age}"
         )
         data = {
             "combo": score_data["max_combo"],
-            "max_combo": args["max_combo"],
+            "max_combo": score_data["args"]["max_combo"],
             "acc": score_data["accuracy"] * 100,
-            "pp": score_data["pp"] if score_data["pp"] else args["curr_perf"].pp,
+            "pp": score_data["pp"] if score_data["pp"] else score_data["args"]["pp"],
             "misses": score_data["statistics"]["count_miss"],
-            "acc_if_fc": args["acc"],
-            "pp_if_fc": args["perf"].pp,
+            "acc_if_fc": score_data["args"]["acc_for_fc"],
+            "pp_if_fc": score_data["args"]["pp_for_fc"],
             "status": score_data["beatmap"]["status"],
             "created_at": score_data["created_at"],
         }
@@ -120,7 +128,7 @@ class osuAPIExtended(osuAPIv2):
             "if_ranked": "if ranked"
             if data["status"] not in ["ranked", "approved"]
             else "",
-            "score_age": f"{score_age(data['created_at'])} ago",
+            "score_age": f"{score_age(data['created_at'])}",
         }
         return format_string.format(**parts)
 
