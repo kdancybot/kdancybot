@@ -278,7 +278,7 @@ def convert_gm_response_to_score_data(response):
     return {
         "accuracy": response["gameplay"]["accuracy"] / 100,
         "args": {
-            "max_combo": 0, # currently no way to get map's combo from json
+            "max_combo": response["menu"]["bm"]["stats"]["maxCombo"], # map's max combo
             "pp": response["gameplay"]["pp"]["current"],
             "acc_for_fc": acc,
             "pp_for_fc": pp
