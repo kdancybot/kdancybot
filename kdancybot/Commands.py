@@ -159,11 +159,24 @@ class Commands:
             return ""
 
         score_data = convert_np_response_to_score_data(response)
-
-        message = self.score_info(
-            score_data,
-            remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
-        )
+        # if player hit at least one note, then do usual calculation (like in !r)
+        if score_data["max_combo"]: 
+            message = self.osu.score_info_build(
+                score_data,
+                remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+            )
+        else:
+            response_format = "{map_info} | {95}, {98}, {100}"
+            parts = {
+                "map_info": self.osu.map_info_build(
+                    score_data,
+                    remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+                ),
+                "95": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "95"),
+                "98": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "98"),
+                "100": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "100")
+            }
+            message = response_format.format(**parts)
         return message
 
     def top(self, request):
@@ -379,7 +392,7 @@ class Commands:
             message = " ".join([part for part in message_parts if part])
             # message = f"{request.user} | [{BEATMAP_URL}{map_info['map_id']} {map_name} ({beatmap_attributes['meme']})]"
             response = self.osu.send_pm(self.users.get(request.channel), message)
-            return f"{request.user} sent request: {map_name} {mods}"
+            return f"Sent request: {map_name} {mods}"
         else:
             return "Seems like beatmap does not exist, are you sure dogQ"
 

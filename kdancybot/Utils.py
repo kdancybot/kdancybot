@@ -247,15 +247,36 @@ def round_up_to_hundred(number):
 def calculate_weighted(pp_values):
     return [0.95**i * pp_values[i] for i in range(len(pp_values))]
 
+
+# NP Utils
+
 def gm_get_acc_and_pp_for_fc(response):
     acc = max(ceil(response["gameplay"]["accuracy"]), 95)
     return acc, response["menu"]["pp"][str(acc)]
+
+def sc_get_acc_and_pp_for_fc(response):
+    acc = response["acc"]
+    if acc < 90:
+        return 90, response["osu_m90PP"]
+    if acc < 95:
+        return 95, response["osu_m95PP"]
+    if acc < 96:
+        return 96, response["osu_m96PP"]
+    if acc < 97:
+        return 97, response["osu_m97PP"]
+    if acc < 98:
+        return 98, response["osu_m98PP"]
+    if acc < 99:
+        return 99, response["osu_m99PP"]
+    if acc < 99.9:
+        return 99.9, response["osu_m99_9PP"]
+    return 100, response["osu_mSSPP"]
 
 # gosumemory
 def convert_gm_response_to_score_data(response):
     acc, pp = gm_get_acc_and_pp_for_fc(response)
     return {
-        "accuracy": response["gameplay"]["accuracy"],
+        "accuracy": response["gameplay"]["accuracy"] / 100,
         "args": {
             "max_combo": 0, # currently no way to get map's combo from json
             "pp": response["gameplay"]["pp"]["current"],
@@ -276,33 +297,70 @@ def convert_gm_response_to_score_data(response):
             "title": response["menu"]["bm"]["metadata"]["title"],
         },
         "created_at": "None",
-        "max_combo": response["gameplay"]["combo"]["max"],
+        "max_combo": response["gameplay"]["combo"]["max"], # current try's max combo
         "mods": response["menu"]["mods"]["str"],
         "statistics": {
-            "count_miss": response["gameplay"]["hiis"]["0"],
+            "count_300": response["gameplay"]["hits"]["300"],
+            "count_100": response["gameplay"]["hits"]["100"],
+            "count_50": response["gameplay"]["hits"]["50"],
+            "count_miss": response["gameplay"]["hits"]["0"],
         },
-        "pp": pp,
-
+        "pp": response["gameplay"]["pp"]["current"],
+        "pp_if_fc": {
+            "95": response["menu"]["pp"]["95"],
+            "96": response["menu"]["pp"]["96"],
+            "97": response["menu"]["pp"]["97"],
+            "98": response["menu"]["pp"]["98"],
+            "99": response["menu"]["pp"]["99"],
+            "100": response["menu"]["pp"]["100"],
+        }
     }
 
 
 # stream companion
 def convert_sc_response_to_score_data(response):
+    acc, pp = sc_get_acc_and_pp_for_fc(response)
     mods = "" if response["mods"] == "None" else "".join(response["mods"].split(","))
     return {
+
+        "accuracy": response["acc"] / 100,
+        "args": {
+            "max_combo": response["maxCombo"],
+            "pp": response["ppIfMapEndsNow"],
+            "acc_for_fc": acc,
+            "pp_for_fc": pp
+        },
         "attributes": {
             "star_rating": response["mStars"],
         },
         "beatmap": {
             "id": response["mapid"],
             "version": response["diffName"],
+            "status": "ranked"
         },
         "beatmapset": {
             "id": response["mapsetid"],
             "artist": response["artistRoman"],
             "title": response["titleRoman"],
         },
+        "created_at": "None",
+        "max_combo": response["currentMaxCombo"],
         "mods": mods,
+        "statistics": {
+            "count_300": response["c300"],
+            "count_100": response["c100"],
+            "count_50": response["c50"],
+            "count_miss": response["miss"],
+        },
+        "pp": response["ppIfMapEndsNow"],
+        "pp_if_fc": {
+            "95": response["osu_m95PP"],
+            "96": response["osu_m96PP"],
+            "97": response["osu_m97PP"],
+            "98": response["osu_m98PP"],
+            "99": response["osu_m99PP"],
+            "100": response["osu_m100PP"],
+        }
     }
 
 
@@ -312,3 +370,7 @@ def convert_np_response_to_score_data(response):
         return convert_gm_response_to_score_data(response)
     elif "score" in response.keys():
         return convert_sc_response_to_score_data(response)
+
+
+def get_pp_for_acc_from_np_response(pp_if_fc, acc):
+    return f"{acc}%: {pp_if_fc[str(acc)]}pp"

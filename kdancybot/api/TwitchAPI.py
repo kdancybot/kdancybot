@@ -122,13 +122,13 @@ class TwitchChatHandler:
         await self.ws.send("NICK {}".format(self.username))
 
     async def join_channels(self, users):
-        if len(users):
+        if self.ws and len(users):
             join_message = "JOIN #" + ",#".join(users)
             await self.ws.send(join_message)
             logger.info("Joined channels: {}".format(", ".join(users)))
 
     async def part_channels(self, users):
-        if len(users):
+        if self.ws and len(users):
             part_message = "PART #" + ",#".join(users)
             await self.ws.send(part_message)
             logger.info("Left channels: {}".format(", ".join(users)))
@@ -143,6 +143,7 @@ class TwitchChatHandler:
                 await self.start_routines()
                 while True:
                     message = Message(await ws.recv())
+                    logger.debug(message)
                     asyncio.create_task(self.handle_message(message))
             except Exception as e:
                 self.reset_data_after_exception()
@@ -183,7 +184,8 @@ class TwitchChatHandler:
         )
         self.users = active_usernames
 
-    async def update_settings(self):
+    async def update_settings(self):    
+        logger.info("Updating settings")
         self.settings = Settings.GetAllSettings()
 
     async def start_routines(self):

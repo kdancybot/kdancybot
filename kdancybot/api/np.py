@@ -21,7 +21,7 @@ class NPClient:
         try:
             r = requests.request(http_method, url, headers=headers, data=data, timeout=3)  # .json()
             logger.debug(f"Got {r.status_code} code")
-        except ConnectTimeout:
+        except requests.ConnectTimeout:
             return {"error": "Response timeout"}
         return r
 
@@ -43,7 +43,7 @@ class NPClient:
 
     def get_np(client):
         data = NPClient.send_command(client, "np")
-        data.encoding = 'utf-8-sig'
+        data.encoding = 'utf-8-sig' # This is done to make sure StreamCompanion's data decodes fine
         return data
 
 
