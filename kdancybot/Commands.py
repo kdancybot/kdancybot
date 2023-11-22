@@ -130,7 +130,7 @@ class Commands:
         )
         return message
 
-    def now_playing(self, request):
+    def now_playing_map(self, request):
         try:
             response = kdancybot.api.np.NPClient.get_np(request.channel).json()
             if response.get("error"):
@@ -148,6 +148,24 @@ class Commands:
         )
         return message
 
+    def now_playing(self, request):
+        try:
+            response = kdancybot.api.np.NPClient.get_np(request.channel).json()
+            if response.get("error"):
+                logger.info("NP: error from server for user {}: {}".format(request.channel, response))
+                raise Exception()
+        except Exception as e:
+            logger.info(str(e))
+            return self.recent_played(request)
+
+        score_data = convert_np_response_to_score_data(response)
+
+        message = self.osu.score_info_build(
+            score_data,
+            remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+        )
+        return message
+
     def now_playing_pp(self, request):
         try:
             response = kdancybot.api.np.NPClient.get_np(request.channel).json()
@@ -160,23 +178,17 @@ class Commands:
 
         score_data = convert_np_response_to_score_data(response)
         # if player hit at least one note, then do usual calculation (like in !r)
-        if score_data["max_combo"]: 
-            message = self.osu.score_info_build(
+        response_format = "{map_info} | {pp95}, {pp98}, {pp100}"
+        parts = {
+            "map_info": self.map_info(
                 score_data,
                 remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
-            )
-        else:
-            response_format = "{map_info} | {pp95}, {pp98}, {pp100}"
-            parts = {
-                "map_info": self.osu.map_info_build(
-                    score_data,
-                    remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
-                ),
-                "pp95": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "95"),
-                "pp98": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "98"),
-                "pp100": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "100")
-            }
-            message = response_format.format(**parts)
+            ),
+            "pp95": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "95"),
+            "pp98": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "98"),
+            "pp100": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "100")
+        }
+        message = response_format.format(**parts)
         return message
 
     def top(self, request):

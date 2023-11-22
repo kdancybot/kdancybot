@@ -45,6 +45,7 @@ class TwitchChatHandler:
             "whatif": self.commands.whatif,
             "top": self.commands.top,
             "profile": self.commands.profile,
+            "map": self.commands.now_playing_map,
             "np": self.commands.now_playing,
             "nppp": self.commands.now_playing_pp,
             "к": self.commands.recent,
