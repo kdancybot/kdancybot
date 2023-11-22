@@ -166,15 +166,15 @@ class Commands:
                 remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
             )
         else:
-            response_format = "{map_info} | {95}, {98}, {100}"
+            response_format = "{map_info} | {pp95}, {pp98}, {pp100}"
             parts = {
                 "map_info": self.osu.map_info_build(
                     score_data,
                     remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
                 ),
-                "95": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "95"),
-                "98": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "98"),
-                "100": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "100")
+                "pp95": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "95"),
+                "pp98": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "98"),
+                "pp100": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "100")
             }
             message = response_format.format(**parts)
         return message

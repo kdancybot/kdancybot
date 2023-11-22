@@ -359,7 +359,7 @@ def convert_sc_response_to_score_data(response):
             "97": response["osu_m97PP"],
             "98": response["osu_m98PP"],
             "99": response["osu_m99PP"],
-            "100": response["osu_m100PP"],
+            "100": response["osu_mSSPP"],
         }
     }
 
