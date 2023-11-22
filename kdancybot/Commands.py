@@ -160,10 +160,16 @@ class Commands:
 
         score_data = convert_np_response_to_score_data(response)
 
-        message = self.osu.score_info_build(
-            score_data,
-            remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
-        )
+        if score_data["max_combo"]:
+            message = self.osu.score_info_build(
+                score_data,
+                remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+            )
+        else:
+            message = self.map_info(
+                score_data,
+                remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+            )
         return message
 
     def now_playing_pp(self, request):
