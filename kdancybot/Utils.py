@@ -372,5 +372,8 @@ def convert_np_response_to_score_data(response):
         return convert_sc_response_to_score_data(response)
 
 
+def pp_to_str(pp_value):
+    return f"{int(float(pp_value) + .5)}pp"
+
 def get_pp_for_acc_from_np_response(pp_if_fc, acc):
-    return f"{acc}%: {pp_if_fc[str(acc)]}pp"
+    return f"{acc}%: {pp_to_str(pp_if_fc[acc])}"
