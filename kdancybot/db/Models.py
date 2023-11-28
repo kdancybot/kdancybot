@@ -33,6 +33,17 @@ db = ReconnectMySQLDatabase(
     host=host,
 )
 
+class Messages(Model):
+    id = IntegerField(primary_key=True)
+    channel = CharField(max_length=25, null=True)
+    chatter = CharField(max_length=25, null=True)
+    command = CharField(max_length=15, null=True)
+    message = CharField(max_length=500, null=True)
+
+    class Meta:
+        database = db
+        table_name = "messages"
+
 class Twitch(Model):
     id = IntegerField(primary_key=True)
     refresh_token = CharField(max_length=50, null=True)

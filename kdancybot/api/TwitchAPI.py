@@ -6,7 +6,7 @@ from kdancybot.Commands import Commands
 from kdancybot.Timer import Timer
 from kdancybot.Cooldown import Cooldown
 from kdancybot.Utils import parse_beatmap_link
-from kdancybot.db.Models import Settings, Osu, Twitch
+from kdancybot.db.Models import Settings, Osu, Twitch, Messages
 from kdancybot.RoutineBuilder import start_routines
 
 import websockets
@@ -93,6 +93,12 @@ class TwitchChatHandler:
                     self.executor, command_func, message
                 )
                 await self.respond_to_message(message, ret)
+                Messages.insert(
+                    channel = message.channel,
+                    chatter = message.user,
+                    command = message.user_command,
+                    message = message.message,
+                ).execute()
 
     async def handle_privmsg(self, message):
         # await asyncio.gather(
