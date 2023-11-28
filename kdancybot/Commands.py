@@ -381,7 +381,7 @@ class Commands:
             f"(#{user['statistics']['global_rank']}, #{user['statistics']['country_rank']}{user['country_code']})"
             if isinstance(user["statistics"]["global_rank"], int)
             else "",
-            f"{user['statistics']['pp']}pp",
+            f"{round(user['statistics']['pp'], 1)}pp",
         ]
         message = " ".join([part for part in message_parts if part])
         return message
