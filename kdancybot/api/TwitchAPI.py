@@ -6,7 +6,7 @@ from kdancybot.Commands import Commands
 from kdancybot.Timer import Timer
 from kdancybot.Cooldown import Cooldown
 from kdancybot.Utils import parse_beatmap_link
-from kdancybot.db.Models import Settings, Osu, Twitch, Messages
+from kdancybot.db.Models import Settings, Osu, Twitch, Messages, Aliases
 from kdancybot.RoutineBuilder import start_routines
 
 import websockets
@@ -27,7 +27,7 @@ class TwitchChatHandler:
         self.token = TwitchToken(config)
         self.commands = Commands(config)
         self.routines = None
-        self.settings = Settings.GetAllSettings()  # CURRENTLY USELESS
+        self.settings = Settings.GetAll()  # CURRENTLY USELESS
         self.ws = None
         self.users = list()
         # self.personal_commands = PersonalCommands(config)
@@ -35,11 +35,8 @@ class TwitchChatHandler:
         self.username = config["twitch"]["username"]
         self.ignored_users = [self.username, "nightbot", "streamelements"]
         self.command_templates = {
-            "r": self.commands.recent,
             "recent": self.commands.recent,
-            "rb": self.commands.recentbest,
             "recentbest": self.commands.recentbest,
-            "tb": self.commands.todaybest,
             "todaybest": self.commands.todaybest,
             "ppdiff": self.commands.ppdiff,
             "whatif": self.commands.whatif,
@@ -48,13 +45,8 @@ class TwitchChatHandler:
             "map": self.commands.now_playing_map,
             "np": self.commands.now_playing,
             "nppp": self.commands.now_playing_pp,
-            "к": self.commands.recent,
-            "ки": self.commands.recentbest,
-            "еи": self.commands.todaybest,
-            "црфеша": self.commands.whatif,
-            "ещз": self.commands.top,
-            "тз": self.commands.now_playing,
         }
+        self.aliases = None
 
         self.cd = Cooldown(self.command_templates.keys())
         self.executor = ThreadPoolExecutor(20)
@@ -78,17 +70,18 @@ class TwitchChatHandler:
 
     async def handle_commands(self, message: Message):
         if message and message.user_command:
+            command = self.aliases.get(message.user_command, message.user_command)
             # personal_command_func = self.personal_commands[message.channel].get(
             #     message.user_command
             # )
-            command_func = self.command_templates.get(message.user_command)
+            command_func = self.command_templates.get(command)
             # if personal_command_func:
             #     ret = await asyncio.get_event_loop().run_in_executor(
             #         self.executor, personal_command_func, message
             #     )
             #     await self.respond_to_message(message, ret)
             # el
-            if command_func and self.cd.cd(message.user_command, message.channel):
+            if command_func and self.cd.cd(command, message.channel):
                 ret = await asyncio.get_event_loop().run_in_executor(
                     self.executor, command_func, message
                 )
@@ -171,7 +164,7 @@ class TwitchChatHandler:
         self.users = list()
 
     async def check_channels(self):
-        users_settings = Settings.GetAllSettings()
+        users_settings = Settings.GetAll()
         active_users = [
             u.twitch_id
             for u in users_settings
@@ -193,11 +186,16 @@ class TwitchChatHandler:
 
     async def update_settings(self):    
         logger.info("Updating settings")
-        self.settings = Settings.GetAllSettings()
+        self.settings = Settings.GetAll()
+
+    async def update_aliases(self):    
+        logger.info("Updating aliases")
+        self.aliases = Aliases.GetAll()
 
     async def start_routines(self):
         if not self.routines:
             self.routines = await start_routines(
                 {"func": self.check_channels, "delay": 60},
-                {"func": self.update_settings, "delay": 200},
+                {"func": self.update_settings, "delay": 150},
+                {"func": self.update_aliases, "delay": 3600},
             )

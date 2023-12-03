@@ -125,9 +125,22 @@ class Settings(Model):
         user = Settings.select().join(Osu).where(Osu.username == username).dicts().get()
         return user
 
-    def GetAllSettings():
+    def GetAll():
         return Settings.select()
 
 
+
+class Aliases(Model):
+    alias = CharField(max_length=25, primary_key=True)
+    command = CharField(max_length=25)
+
+    class Meta:
+        database = db
+        table_name = "aliases"
+        
+    def GetAll():
+        return {alias.alias: alias.command for alias in Aliases.select()}
+
+
 # Create the tables
-db.create_tables([Twitch, Osu, Settings])
+db.create_tables([Twitch, Osu, Settings, Messages, Aliases])
