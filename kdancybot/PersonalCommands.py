@@ -1,8 +1,8 @@
-from kdancybot.db.Models import Twitch
+# from kdancybot.db.Models import Twitch
 
 
-def WelterSkin(message: any):
-    return "https://drive.google.com/file/d/1j5hOWahZrWK4m6Vwr_pH0EKGc5XrHaT-/view"
+# def WelterSkin(message: any):
+#     return "https://drive.google.com/file/d/1j5hOWahZrWK4m6Vwr_pH0EKGc5XrHaT-/view"
 
 
 # class PersonalCommands:

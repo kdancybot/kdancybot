@@ -6,6 +6,7 @@ logger = logging.getLogger(__name__)
 
 russian_alphabet = "АаБбВвГгДдЕеЁёЖжЗзИиЙйКкЛлМмНнОоПпСсТтУуФфХхЦцЧчШшЩщЪъЫыЬьЭэЮюЯя"
 
+
 class Message:
     # How messages are parsed, and what the Message class attributes represent:
     # @badges=subscriber/0;color=#00FF7F;display-name=CubieDev;emotes=;flags=;id=d315b88f-7813-467a-a1fc-418b00d4d5ee;mod=0;room-id=70624819;subscriber=1;tmi-sent-ts=1550060037421;turbo=0;user-id=94714716;user-type= :cubiedev!cubiedev@cubiedev.tmi.twitch.tv PRIVMSG #flackblag :Hello World!
@@ -90,7 +91,7 @@ class Message:
         # Get all the remaining parameters used in the command.
         # For example the channel you are attempting to join, or the user that is being modded.
         # We use the index of self.type to get everything listed after the type.
-        params = command[command.index(message_type) + len(message_type) + 1 :]
+        params = command[command.index(message_type) + len(message_type) + 1:]
         self.params = params if len(params) > 0 else ""
 
     def parse_channel(self, params):
@@ -122,7 +123,11 @@ class Message:
                 # Replace ╔ACTION with /me, and remove the last ╔
                 message = "/me" + message[7:-1]
             self.message = "".join(
-                char for char in message.strip() if any(char in good_chars for good_chars in [printable, russian_alphabet])
+                char
+                for char in message.strip()
+                if any(
+                    char in good_chars for good_chars in [printable, russian_alphabet]
+                )
             )
         else:
             self.message = ""

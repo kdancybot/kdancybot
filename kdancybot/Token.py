@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
+
 class Token:
     def __init__(self, config):
         self.url = "https://osu.ppy.sh/oauth/token"
@@ -41,7 +42,9 @@ class Token:
     def token(self):
         if not self.token_valid():
             logger.info("Sent new token request")
-            response = requests.request('POST', self.url, headers=self.headers, data=self.data)
+            response = requests.request(
+                "POST", self.url, headers=self.headers, data=self.data
+            )
 
             if response.ok:
                 logger.info("Got new token.")

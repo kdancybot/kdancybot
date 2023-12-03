@@ -9,8 +9,8 @@ from peewee import (
     AutoField,
     BooleanField,
     ForeignKeyField,
-    fn,
 )
+
 
 class ReconnectMySQLDatabase(ReconnectMixin, MySQLDatabase):
     pass
@@ -33,6 +33,7 @@ db = ReconnectMySQLDatabase(
     host=host,
 )
 
+
 class Messages(Model):
     id = IntegerField(primary_key=True)
     channel = CharField(max_length=25, null=True)
@@ -43,6 +44,7 @@ class Messages(Model):
     class Meta:
         database = db
         table_name = "messages"
+
 
 class Twitch(Model):
     id = IntegerField(primary_key=True)
@@ -63,7 +65,8 @@ class Twitch(Model):
         return {
             u["twitch_username"].lower(): u["osu_id"]
             for u in Twitch.select(
-                Twitch.username.alias("twitch_username"), Osu.id.alias("osu_id")
+                Twitch.username.alias("twitch_username"),
+                Osu.id.alias("osu_id")
             )
             .join(Settings)
             .join(Osu)
@@ -122,12 +125,18 @@ class Settings(Model):
         return user
 
     def GetSettingsByOsuUsername(username):
-        user = Settings.select().join(Osu).where(Osu.username == username).dicts().get()
+        user = (
+            Settings
+            .select()
+            .join(Osu)
+            .where(Osu.username == username)
+            .dicts()
+            .get()
+        )
         return user
 
     def GetAll():
         return Settings.select()
-
 
 
 class Aliases(Model):
@@ -137,7 +146,7 @@ class Aliases(Model):
     class Meta:
         database = db
         table_name = "aliases"
-        
+
     def GetAll():
         return {alias.alias: alias.command for alias in Aliases.select()}
 

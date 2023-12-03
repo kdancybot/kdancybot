@@ -3,15 +3,11 @@ import kdancybot.api.osuAPIExtended
 import kdancybot.api.np
 from kdancybot.Message import Message
 from kdancybot.Parsing import Parsing
-from kdancybot.db.Models import Twitch, Settings
+from kdancybot.db.Models import Twitch
 
 import re
-from rosu_pp_py import Beatmap, Calculator
-import json
-from datetime import datetime, timedelta
 import logging
 import traceback
-import os
 
 logger = logging.getLogger(__name__)
 ### Methods working with osu!api, to be cropped and moved to Utils
@@ -108,7 +104,7 @@ class Commands:
 
         message = self.score_info(
             args["score_data"],
-            remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+            remove_https=true
         )
         return message
 
@@ -126,7 +122,7 @@ class Commands:
 
         message = self.map_info(
             args["score_data"],
-            remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+            remove_https=true
         )
         return message
 
@@ -144,7 +140,7 @@ class Commands:
 
         message = self.map_info(
             score_data,
-            remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+            remove_https=true
         )
         return message
 
@@ -163,12 +159,12 @@ class Commands:
         if score_data["max_combo"]:
             message = self.osu.score_info_build(
                 score_data,
-                remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+                remove_https=true
             )
         else:
             message = self.map_info(
                 score_data,
-                remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+                remove_https=true
             )
         return message
 
@@ -188,7 +184,7 @@ class Commands:
         parts = {
             "map_info": self.map_info(
                 score_data,
-                remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+                remove_https=true
             ),
             "pp95": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "95"),
             "pp98": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "98"),
@@ -222,7 +218,7 @@ class Commands:
         message += f"{ordinal(args['index'])} top score for {username}: "
         message += self.score_info(
             score_data,
-            remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+            remove_https=true
         )
         return message
 
@@ -308,7 +304,7 @@ class Commands:
             "username": username,
             "score_data": self.score_info(
                 score_data,
-                remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+                remove_https=true
             ),
         }
         return format_string.format(**data)
@@ -346,7 +342,7 @@ class Commands:
             "username": username,
             "score_data": self.score_info(
                 score_data,
-                remove_https=not Settings.GetSettingsByTwitchUsername(request.channel)["request_on"]
+                remove_https=true
             ),
         }
 

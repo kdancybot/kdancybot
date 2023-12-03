@@ -176,7 +176,9 @@ def ordinal(n: int):
 def score_age(date: str) -> str:
     try:
         magnitudes = ["y", "mth", "d", "h", "min", "s"]
-        diff = datetime.now(timezone.utc) - datetime.strptime(date, "%Y-%m-%dT%H:%M:%S%z")
+        diff = datetime.now(timezone.utc) - datetime.strptime(
+            date, "%Y-%m-%dT%H:%M:%S%z"
+        )
         orders = [
             diff.days // 365,
             diff.days // 30,
@@ -212,12 +214,17 @@ def parse_beatmap_link(message):
         if result is not None:
             result = result.groupdict()
 
-            result["mods"] = re.sub(r"[^A-Za-z]", "", result.get("mods", "").upper())
+            result["mods"] = re.sub(
+                r"[^A-Za-z]", "", 
+                result.get("mods", "").upper()
+            )
             result["mods"] = [
-                result["mods"][i : i + 2] for i in range(0, len(result["mods"]), 2)
+                result["mods"][i:i+2] for i in range(0, len(result["mods"]), 2)
             ]
-            result["mods"] = list(mod for mod in Mods.keys() if mod in result["mods"])
-            return result  # ["map_id"]
+            result["mods"] = [
+                mod for mod in Mods.keys() if mod in result["mods"]
+            ]
+            return result
 
     return None
 
@@ -250,9 +257,11 @@ def calculate_weighted(pp_values):
 
 # NP Utils
 
+
 def gm_get_acc_and_pp_for_fc(response):
     acc = max(ceil(response["gameplay"]["accuracy"]), 95)
     return acc, response["menu"]["pp"][str(acc)]
+
 
 def sc_get_acc_and_pp_for_fc(response):
     acc = response["acc"]
@@ -272,16 +281,17 @@ def sc_get_acc_and_pp_for_fc(response):
         return 99.9, response["osu_m99_9PP"]
     return 100, response["osu_mSSPP"]
 
+
 # gosumemory
 def convert_gm_response_to_score_data(response):
     acc, pp = gm_get_acc_and_pp_for_fc(response)
     return {
         "accuracy": response["gameplay"]["accuracy"] / 100,
         "args": {
-            "max_combo": response["menu"]["bm"]["stats"]["maxCombo"], # map's max combo
+            "max_combo": response["menu"]["bm"]["stats"]["maxCombo"],  # map's max combo
             "pp": response["gameplay"]["pp"]["current"],
             "acc_for_fc": acc,
-            "pp_for_fc": pp
+            "pp_for_fc": pp,
         },
         "attributes": {
             "star_rating": response["menu"]["bm"]["stats"]["fullSR"],
@@ -289,7 +299,7 @@ def convert_gm_response_to_score_data(response):
         "beatmap": {
             "id": response["menu"]["bm"]["id"],
             "version": response["menu"]["bm"]["metadata"]["difficulty"],
-            "status": "ranked"
+            "status": "ranked",
         },
         "beatmapset": {
             "id": response["menu"]["bm"]["set"],
@@ -297,7 +307,7 @@ def convert_gm_response_to_score_data(response):
             "title": response["menu"]["bm"]["metadata"]["title"],
         },
         "created_at": "None",
-        "max_combo": response["gameplay"]["combo"]["max"], # current try's max combo
+        "max_combo": response["gameplay"]["combo"]["max"],  # current try's max combo
         "mods": response["menu"]["mods"]["str"],
         "statistics": {
             "count_300": response["gameplay"]["hits"]["300"],
@@ -313,7 +323,7 @@ def convert_gm_response_to_score_data(response):
             "98": response["menu"]["pp"]["98"],
             "99": response["menu"]["pp"]["99"],
             "100": response["menu"]["pp"]["100"],
-        }
+        },
     }
 
 
@@ -322,13 +332,12 @@ def convert_sc_response_to_score_data(response):
     acc, pp = sc_get_acc_and_pp_for_fc(response)
     mods = "" if response["mods"] == "None" else "".join(response["mods"].split(","))
     return {
-
         "accuracy": response["acc"] / 100,
         "args": {
             "max_combo": response["maxCombo"],
             "pp": response["ppIfMapEndsNow"],
             "acc_for_fc": acc,
-            "pp_for_fc": pp
+            "pp_for_fc": pp,
         },
         "attributes": {
             "star_rating": response["mStars"],
@@ -336,7 +345,7 @@ def convert_sc_response_to_score_data(response):
         "beatmap": {
             "id": response["mapid"],
             "version": response["diffName"],
-            "status": "ranked"
+            "status": "ranked",
         },
         "beatmapset": {
             "id": response["mapsetid"],
@@ -360,7 +369,7 @@ def convert_sc_response_to_score_data(response):
             "98": response["osu_m98PP"],
             "99": response["osu_m99PP"],
             "100": response["osu_mSSPP"],
-        }
+        },
     }
 
 
@@ -374,6 +383,7 @@ def convert_np_response_to_score_data(response):
 
 def pp_to_str(pp_value):
     return f"{int(float(pp_value) + .5)}pp"
+
 
 def get_pp_for_acc_from_np_response(pp_if_fc, acc):
     return f"{acc}%: {pp_to_str(pp_if_fc[acc])}"

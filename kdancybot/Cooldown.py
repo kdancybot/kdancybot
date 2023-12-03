@@ -24,7 +24,8 @@ class Cooldown:
         else:
             seconds = settings.get("commands_cd", self.default_cooldown)
 
-        if (self.last_use[command].get(channel)) and (self.last_use[command][channel] + timedelta(seconds=seconds) > datetime.now()):
+        next_use = self.last_use[command][channel] + timedelta(seconds=seconds)
+        if self.last_use[command].get(channel) and next_use > datetime.now():
             return False
         else:
             self.last_use[command][channel] = datetime.now()

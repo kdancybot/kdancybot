@@ -3,20 +3,16 @@ from kdancybot.Message import Message
 from kdancybot.Commands import Commands
 
 # from kdancybot.PersonalCommands import PersonalCommands
-from kdancybot.Timer import Timer
 from kdancybot.Cooldown import Cooldown
 from kdancybot.Utils import parse_beatmap_link
-from kdancybot.db.Models import Settings, Osu, Twitch, Messages, Aliases
+from kdancybot.db.Models import Settings, Twitch, Messages, Aliases
 from kdancybot.RoutineBuilder import start_routines
 
 import websockets
-import re
 import logging
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import traceback
-import threading
-import time
 
 logger = logging.getLogger(__name__)
 
@@ -67,10 +63,19 @@ class TwitchChatHandler:
                     self.executor, self.commands.req, message, map_info
                 )
                 await self.respond_to_message(message, response)
+                Messages.insert(
+                    channel=message.channel,
+                    chatter=message.user,
+                    command="request",
+                    message=message.message,
+                ).execute()
 
     async def handle_commands(self, message: Message):
         if message and message.user_command:
-            command = self.aliases.get(message.user_command, message.user_command)
+            command = self.aliases.get(
+                message.user_command,
+                message.user_command
+            )
             # personal_command_func = self.personal_commands[message.channel].get(
             #     message.user_command
             # )
@@ -87,10 +92,10 @@ class TwitchChatHandler:
                 )
                 await self.respond_to_message(message, ret)
                 Messages.insert(
-                    channel = message.channel,
-                    chatter = message.user,
-                    command = message.user_command,
-                    message = message.message,
+                    channel=message.channel,
+                    chatter=message.user,
+                    command=message.user_command,
+                    message=message.message,
                 ).execute()
 
     async def handle_privmsg(self, message):
@@ -184,11 +189,11 @@ class TwitchChatHandler:
         )
         self.users = active_usernames
 
-    async def update_settings(self):    
+    async def update_settings(self):
         logger.info("Updating settings")
         self.settings = Settings.GetAll()
 
-    async def update_aliases(self):    
+    async def update_aliases(self):
         logger.info("Updating aliases")
         self.aliases = Aliases.GetAll()
 
