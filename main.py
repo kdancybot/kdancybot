@@ -24,13 +24,13 @@ def create_parser():
 def read_config():
     parser = create_parser()
     args = parser.parse_args()
-
     config = configparser.ConfigParser()
     successfully_read_files = config.read(args.config)
     if len(successfully_read_files) == 0:
         logger.error(f"Invalid config file(s): {args.config}")
         exit("No valid config files provided")
     return config
+
 
 def run():
     logger.info("Started running!")
