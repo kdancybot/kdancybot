@@ -4,6 +4,7 @@ import kdancybot.api.np
 from kdancybot.Message import Message
 from kdancybot.Parsing import Parsing
 from kdancybot.db.Models import Twitch
+from kdancybot.RoutineBuilder import start_routines
 
 import re
 import logging
@@ -17,13 +18,33 @@ class Commands:
     def __init__(self, config):
         self.osu = kdancybot.api.osuAPIExtended.osuAPIExtended(config)
         self.config = config
-        self.users = Twitch.GetUsersDict()
+        self.users = None
+        self.routines = None
 
-    def score_info(self, score_data, remove_https=False):
+    # Only this method should be used for creating class' instances
+    # The reason is async function `start_routines` cannot be ran
+    # in constructor (Yes, I know, it's not really a good solution)
+    @classmethod
+    async def Instance(cls, config):
+        self = cls(config)
+        await self.start_routines()
+        return self
+
+    async def update_users(self):
+        self.users = Twitch.GetUsersDict()
+        logger.info("Updating users")
+
+    async def start_routines(self):
+        if not self.routines:
+            self.routines = await start_routines(
+                {"func": self.update_users, "delay": 60}
+            )
+
+    async def score_info(self, score_data, remove_https=False):
         score_data["args"] = self.osu.prepare_score_info(score_data)
         return self.osu.score_info_build(score_data, remove_https)
 
-    def map_info(self, score_data, remove_https=False):
+    async def map_info(self, score_data, remove_https=False):
         return self.osu.map_info_build(score_data, remove_https)
 
     # def get_user_pair(lhs: str, rhs: str):
@@ -33,7 +54,7 @@ class Commands:
     #         return users
 
     # TODO: REWRITE IT FFS
-    def get_users_from_query(self, query, request):
+    async def get_users_from_query(self, query, request):
         query = [re.sub("[^a-zA-Z0-9\[\]\-_ ]", "", word).strip() for word in query]
         tokens = [x for x in query if x]
         query = " ".join(tokens)
@@ -54,18 +75,18 @@ class Commands:
                 return user_data, other_data, user, other
         return None, None, None, None
 
-    def prepare_ppdiff_message(self, user_data, other_data):
+    async def prepare_ppdiff_message(self, user_data, other_data):
         userpp = user_data["statistics"]["pp"]
         otherpp = other_data["statistics"]["pp"]
         # username = username_from_response(user_data)
 
         if userpp > otherpp:
-            message = f"{username_from_response(user_data)} is {round(userpp - otherpp, 1)}pp ahead of {username_from_response(other_data)}. {self.message_to_overtake(other_data, user_data)}"
+            message = f"{username_from_response(user_data)} is {round(userpp - otherpp, 1)}pp ahead of {username_from_response(other_data)}. {await self.message_to_overtake(other_data, user_data)}"
         else:
-            message = f"{username_from_response(user_data)} is {round(otherpp - userpp, 1)}pp behind {username_from_response(other_data)}. {self.message_to_overtake(user_data, other_data)}"
+            message = f"{username_from_response(user_data)} is {round(otherpp - userpp, 1)}pp behind {username_from_response(other_data)}. {await self.message_to_overtake(user_data, other_data)}"
         return message
 
-    def message_to_overtake(self, user_data, other_data):
+    async def message_to_overtake(self, user_data, other_data):
         format_string = "{username} needs to get {count} {pp}pp play{'s' if count > 1 else ''} to overtake {other_data['username']}"
         user_pp = user_data["statistics"]["pp"]
         goal_pp = other_data["statistics"]["pp"]
@@ -78,19 +99,19 @@ class Commands:
 
         return f"{user_data['username']} needs to get {count if count > 1 else 'a'} {int(scores['pp'] + .5)}pp play{'s' if count > 1 else ''} to overtake {other_data['username']}"
 
-    def ppdiff(self, request):
+    async def ppdiff(self, request):
         message = ""
         query = request.arguments
 
-        user_data, other_data, user, other = self.get_users_from_query(query, request)
+        user_data, other_data, user, other = await self.get_users_from_query(query, request)
 
         if not (user_data and other_data and (user_data.ok and other_data.ok)):
             return "Could not find such user(s) NOOOO"
 
-        message = self.prepare_ppdiff_message(user_data.json(), other_data.json())
+        message = await self.prepare_ppdiff_message(user_data.json(), other_data.json())
         return message
 
-    def recent(self, request):
+    async def recent(self, request):
         args = Parsing.Recent(request.arguments)
         if not args.get("username"):
             args["username"] = self.users.get(request.channel)
@@ -102,13 +123,13 @@ class Commands:
         if args["no_scores_today"]:
             return f"No scores for {args['username_rank']} in last 24 hours"
 
-        message = self.score_info(
+        message = await self.score_info(
             args["score_data"],
             remove_https=True
         )
         return message
 
-    def recent_played(self, request):
+    async def recent_played(self, request):
         args = Parsing.Recent(request.arguments)
         if not args.get("username"):
             args["username"] = self.users.get(request.channel)
@@ -120,13 +141,13 @@ class Commands:
         if args["no_scores_today"]:
             return f"No scores for {args['username_rank']} in last 24 hours"
 
-        message = self.map_info(
+        message = await self.map_info(
             args["score_data"],
             remove_https=True
         )
         return message
 
-    def now_playing_map(self, request):
+    async def now_playing_map(self, request):
         try:
             response = kdancybot.api.np.NPClient.get_np(request.channel).json()
             if response.get("error"):
@@ -138,13 +159,13 @@ class Commands:
 
         score_data = convert_np_response_to_score_data(response)
 
-        message = self.map_info(
+        message = await self.map_info(
             score_data,
             remove_https=True
         )
         return message
 
-    def now_playing(self, request):
+    async def now_playing(self, request):
         try:
             response = kdancybot.api.np.NPClient.get_np(request.channel).json()
             if response.get("error"):
@@ -152,23 +173,23 @@ class Commands:
                 raise Exception()
         except Exception as e:
             logger.info(str(e))
-            return self.recent_played(request)
+            return await self.recent_played(request)
 
         score_data = convert_np_response_to_score_data(response)
 
         if score_data["max_combo"]:
-            message = self.osu.score_info_build(
+            message = await self.osu.score_info_build(
                 score_data,
                 remove_https=True
             )
         else:
-            message = self.map_info(
+            message = await self.map_info(
                 score_data,
                 remove_https=True
             )
         return message
 
-    def now_playing_pp(self, request):
+    async def now_playing_pp(self, request):
         try:
             response = kdancybot.api.np.NPClient.get_np(request.channel).json()
             if response.get("error"):
@@ -182,7 +203,7 @@ class Commands:
         # if player hit at least one note, then do usual calculation (like in !r)
         response_format = "{map_info} | {pp95}, {pp98}, {pp100}"
         parts = {
-            "map_info": self.map_info(
+            "map_info": await self.map_info(
                 score_data,
                 remove_https=True
             ),
@@ -193,7 +214,7 @@ class Commands:
         message = response_format.format(**parts)
         return message
 
-    def top(self, request):
+    async def top(self, request):
         args = Parsing.Top(request.arguments)
         if not args.get("username"):
             args["username"] = self.users.get(request.channel)
@@ -216,13 +237,13 @@ class Commands:
         score_data = top100[args["index"] - 1]
 
         message += f"{ordinal(args['index'])} top score for {username}: "
-        message += self.score_info(
+        message += await self.score_info(
             score_data,
             remove_https=True
         )
         return message
 
-    def whatif(self, request):
+    async def whatif(self, request):
         args = Parsing.Whatif(
             request.arguments, self.osu, username=self.users.get(request.channel)
         )
@@ -264,7 +285,7 @@ class Commands:
         message += f"{round(new_pp - full_pp, 1):+} pp)"
         return message
 
-    def recentbest(self, request):
+    async def recentbest(self, request):
         format_string = "Latest top score #{index} for {username}: {score_data}"
         args = Parsing.Top(request.arguments)
         if not args.get("username"):
@@ -302,14 +323,14 @@ class Commands:
         data = {
             "index": index,
             "username": username,
-            "score_data": self.score_info(
+            "score_data": await self.score_info(
                 score_data,
                 remove_https=True
             ),
         }
         return format_string.format(**data)
 
-    def todaybest(self, request):
+    async def todaybest(self, request):
         format_string = "Today's score #{index} for {username}: {score_data}"
         args = Parsing.Top(request.arguments)
         if not args.get("username"):
@@ -340,7 +361,7 @@ class Commands:
         data = {
             "index": args["index"],
             "username": username,
-            "score_data": self.score_info(
+            "score_data": await self.score_info(
                 score_data,
                 remove_https=True
             ),
@@ -348,21 +369,7 @@ class Commands:
 
         return format_string.format(**data)
 
-    def ppcounter(self, request):
-        return "not implenented PEEPEES"
-
-        query = request.arguments
-        if not query:
-            return "usage: !pp [map id | recent] [mods]"
-        query = " ".join([x.strip() for x in query.split(" ") if x.strip()])
-        if query[0].lower() == "recent":
-            query = self.osu.get_last_played(self.users.get(request.channel))
-            if not query.ok or len(query.json()) == 0:
-                return "Could not get recent score PEEPEES"
-            map_id = str(query[0]["beatmap"]["id"])
-            mods = str(query[0]["beatmap"]["id"])
-
-    def profile(self, request: Message):
+    async def profile(self, request: Message):
         args = Parsing.Profile(request.arguments)
         if not args.get("username"):
             args["username"] = self.users.get(request.channel, 2)
@@ -382,7 +389,7 @@ class Commands:
         message = " ".join([part for part in message_parts if part])
         return message
 
-    def req(self, request: Message, map_info: dict):
+    async def req(self, request: Message, map_info: dict):
         BEATMAP_URL = "https://osu.ppy.sh/b/"
         beatmap = self.osu.get_beatmap(map_info["map_id"])
         beatmap_attributes = self.osu.get_beatmap_attributes(

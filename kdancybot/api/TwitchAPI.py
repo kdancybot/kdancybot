@@ -21,7 +21,7 @@ class TwitchChatHandler:
     def __init__(self, config: dict):
         self.config = config
         self.token = TwitchToken(config)
-        self.commands = Commands(config)
+        self.commands = None
         self.routines = None
         self.settings = Settings.GetAll()  # CURRENTLY USELESS
         self.ws = None
@@ -30,6 +30,13 @@ class TwitchChatHandler:
         self.url = "ws://irc-ws.chat.twitch.tv:80"
         self.username = config["twitch"]["username"]
         self.ignored_users = [self.username, "nightbot", "streamelements"]
+
+        self.aliases = None
+        self.cd = None
+        self.executor = ThreadPoolExecutor(20)
+
+    async def initialize(self):
+        self.commands = await Commands.Instance(self.config)
         self.command_templates = {
             "recent": self.commands.recent,
             "recentbest": self.commands.recentbest,
@@ -42,10 +49,7 @@ class TwitchChatHandler:
             "np": self.commands.now_playing,
             "nppp": self.commands.now_playing_pp,
         }
-        self.aliases = None
-
         self.cd = Cooldown(self.command_templates.keys())
-        self.executor = ThreadPoolExecutor(20)
 
     async def respond_to_message(self, message, response):
         if self.ws and response:
@@ -59,9 +63,7 @@ class TwitchChatHandler:
         if message.user.lower() not in self.ignored_users:
             map_info = parse_beatmap_link(message.message)
             if map_info and self.cd.cd("request", message.channel):
-                response = await asyncio.get_event_loop().run_in_executor(
-                    self.executor, self.commands.req, message, map_info
-                )
+                response = self.commands.req(message, map_info)
                 await self.respond_to_message(message, response)
                 Messages.insert(
                     channel=message.channel,
@@ -87,10 +89,11 @@ class TwitchChatHandler:
             #     await self.respond_to_message(message, ret)
             # el
             if command_func and self.cd.cd(command, message.channel):
-                ret = await asyncio.get_event_loop().run_in_executor(
-                    self.executor, command_func, message
-                )
-                await self.respond_to_message(message, ret)
+                response = await command_func(message)
+                # await asyncio.get_event_loop().run_in_executor(
+                #     self.executor, command_func, message
+                # )
+                await self.respond_to_message(message, response)
                 Messages.insert(
                     channel=message.channel,
                     chatter=message.user,
@@ -139,6 +142,7 @@ class TwitchChatHandler:
             logger.info("Left channels: {}".format(", ".join(users)))
 
     async def loop(self):
+        await self.initialize()
         async for ws in websockets.connect(self.url):
             try:
                 self.ws = ws
