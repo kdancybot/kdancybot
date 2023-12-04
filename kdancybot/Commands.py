@@ -104,7 +104,7 @@ class Commands:
 
         message = self.score_info(
             args["score_data"],
-            remove_https=true
+            remove_https=True
         )
         return message
 
@@ -122,7 +122,7 @@ class Commands:
 
         message = self.map_info(
             args["score_data"],
-            remove_https=true
+            remove_https=True
         )
         return message
 
@@ -140,7 +140,7 @@ class Commands:
 
         message = self.map_info(
             score_data,
-            remove_https=true
+            remove_https=True
         )
         return message
 
@@ -159,12 +159,12 @@ class Commands:
         if score_data["max_combo"]:
             message = self.osu.score_info_build(
                 score_data,
-                remove_https=true
+                remove_https=True
             )
         else:
             message = self.map_info(
                 score_data,
-                remove_https=true
+                remove_https=True
             )
         return message
 
@@ -184,7 +184,7 @@ class Commands:
         parts = {
             "map_info": self.map_info(
                 score_data,
-                remove_https=true
+                remove_https=True
             ),
             "pp95": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "95"),
             "pp98": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "98"),
@@ -218,7 +218,7 @@ class Commands:
         message += f"{ordinal(args['index'])} top score for {username}: "
         message += self.score_info(
             score_data,
-            remove_https=true
+            remove_https=True
         )
         return message
 
@@ -304,7 +304,7 @@ class Commands:
             "username": username,
             "score_data": self.score_info(
                 score_data,
-                remove_https=true
+                remove_https=True
             ),
         }
         return format_string.format(**data)
@@ -342,7 +342,7 @@ class Commands:
             "username": username,
             "score_data": self.score_info(
                 score_data,
-                remove_https=true
+                remove_https=True
             ),
         }
 
