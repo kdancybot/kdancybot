@@ -63,7 +63,7 @@ class TwitchChatHandler:
         if message.user.lower() not in self.ignored_users:
             map_info = parse_beatmap_link(message.message)
             if map_info and self.cd.cd("request", message.channel):
-                response = self.commands.req(message, map_info)
+                response = await self.commands.req(message, map_info)
                 await self.respond_to_message(message, response)
                 Messages.insert(
                     channel=message.channel,
