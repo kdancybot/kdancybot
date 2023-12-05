@@ -178,7 +178,7 @@ class Commands:
         score_data = convert_np_response_to_score_data(response)
 
         if score_data["max_combo"]:
-            message = await self.osu.score_info_build(
+            message = self.osu.score_info_build(
                 score_data,
                 remove_https=True
             )
