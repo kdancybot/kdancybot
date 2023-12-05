@@ -120,10 +120,14 @@ def pp_to_overtake(top100, user_pp, goal_pp):
     }
 
 
+def mods_to_num(mods):
+    sum = 0
+    for mod in mods:
+        sum += int(Mods.get(mod, 0))
+    return sum
+
 def build_calculator(score_data):
-    mods = 0
-    for mod in score_data["mods"]:
-        mods += int(Mods[mod])
+    mods = mods_to_num(score_data["mods"])
     stats = score_data["statistics"]
     calc = Calculator(
         mode=0,
@@ -283,6 +287,11 @@ def sc_get_acc_and_pp_for_fc(response):
 
 
 # gosumemory
+def convert_mods_to_list_gm(mods):
+    if mods == "NM":
+        return ""
+    return [mods[i:i+2] for i in range(0, len(mods), 2)]
+
 def convert_gm_response_to_score_data(response):
     acc, pp = gm_get_acc_and_pp_for_fc(response)
     return {
@@ -308,7 +317,7 @@ def convert_gm_response_to_score_data(response):
         },
         "created_at": "None",
         "max_combo": response["gameplay"]["combo"]["max"],  # current try's max combo
-        "mods": response["menu"]["mods"]["str"],
+        "mods": convert_mods_to_list_gm(response["menu"]["mods"]["str"]),
         "statistics": {
             "count_300": response["gameplay"]["hits"]["300"],
             "count_100": response["gameplay"]["hits"]["100"],
@@ -324,10 +333,16 @@ def convert_gm_response_to_score_data(response):
             "99": response["menu"]["pp"]["99"],
             "100": response["menu"]["pp"]["100"],
         },
+        "map_data": response.get("mapData", "").encode()
     }
 
 
 # stream companion
+def convert_mods_to_list_sc(mods):
+    mods.replace("SV2", "V2")
+    return [mods[i:i+2] for i in range(0, len(mods), 2)]
+
+
 def convert_sc_response_to_score_data(response):
     acc, pp = sc_get_acc_and_pp_for_fc(response)
     mods = "" if response["mods"] == "None" else "".join(response["mods"].split(","))
@@ -354,7 +369,7 @@ def convert_sc_response_to_score_data(response):
         },
         "created_at": "None",
         "max_combo": response["currentMaxCombo"],
-        "mods": mods,
+        "mods": convert_mods_to_list_sc(mods),
         "statistics": {
             "count_300": response["c300"],
             "count_100": response["c100"],
@@ -370,6 +385,7 @@ def convert_sc_response_to_score_data(response):
             "99": response["osu_m99PP"],
             "100": response["osu_mSSPP"],
         },
+        "map_data": response.get("mapData", "").encode()
     }
 
 

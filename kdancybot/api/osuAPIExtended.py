@@ -27,45 +27,39 @@ class osuAPIExtended(osuAPIv2):
         return map_data
 
     def prepare_score_info(self, score_data):
+        map_data = self.map_data(str(score_data["beatmap"]["id"]))
+        return self._prepare_score_info(score_data, map_data)
+
+    def _prepare_score_info(self, score_data, map_data):
         args = dict()
 
-        if not score_data.get("attributes"):
-            score_data["attributes"] = self.get_beatmap_attributes(
-                score_data["beatmap"]["id"], generate_mods_payload(score_data["mods"])
-            ).json()["attributes"]
+        beatmap = Beatmap(bytes=map_data)
+        calc = Calculator(mods=mods_to_num(score_data["mods"]))
+        perf = calc.performance(beatmap)
 
-        max_combo = score_data["attributes"].get("max_combo")
-        if not max_combo:
-            try:
-                max_combo = self.get_beatmap(
-                    score_data["beatmap"]["id"]
-                ).json()[
-                    "max_combo"
-                ]
-            except Exception:
-                pass
-        map_data = self.map_data(str(score_data["beatmap"]["id"]))
+        args["max_combo"] = perf.difficulty.max_combo
+        args["star_rating"] = perf.difficulty.stars
+
+        calc = build_calculator(score_data)
+        curr_perf = calc.performance(beatmap)
+
         objects_passed = get_passed_objects(score_data)
-        all_objects = get_objects_count(score_data)
+        all_objects = perf.difficulty.n_circles + perf.difficulty.n_sliders + perf.difficulty.n_spinners
         n100 = (score_data["statistics"]["count_100"] * all_objects) // objects_passed
         n50 = (score_data["statistics"]["count_50"] * all_objects) // objects_passed
         n300 = all_objects - n100 - n50
         acc = 100 * (n300 + n100 / 3 + n50 / 6) / all_objects
 
-        calc = build_calculator(score_data)
-        beatmap = Beatmap(bytes=map_data)
-
-        curr_perf = calc.performance(beatmap)
         calc.set_passed_objects(all_objects)
         calc.set_n300(n300)
         calc.set_n100(n100)
         calc.set_n50(n50)
         calc.set_n_misses(0)
-        calc.set_combo(max_combo)
+        calc.set_combo(args["max_combo"])
         perf = calc.performance(beatmap)
 
-        args["max_combo"] = max_combo
-        args["star_rating"] = score_data["attributes"]["star_rating"]
+        # args["max_combo"] = perf.difficulty.max_combo
+        # args["star_rating"] = perf.difficulty.stars
         args["pp"] = curr_perf.pp
         args["pp_for_fc"] = perf.pp
         args["acc_for_fc"] = acc
@@ -142,7 +136,7 @@ class osuAPIExtended(osuAPIv2):
         data = {
             "link": link,
             "map_name": map_name_from_response(score_data),
-            "star_rating": f"{round(score_data['attributes']['star_rating'], 2)}*",
+            "star_rating": f"{round(score_data['args']['star_rating'], 2)}*",
             "mods": generate_mods_string(score_data["mods"]),
         }
         return format_string.format(**data)

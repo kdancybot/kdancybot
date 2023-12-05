@@ -176,6 +176,10 @@ class Commands:
             return await self.recent_played(request)
 
         score_data = convert_np_response_to_score_data(response)
+        score_data["args"] = self.osu._prepare_score_info(
+            score_data,
+            score_data["map_data"]
+        )
 
         if score_data["max_combo"]:
             message = self.osu.score_info_build(
