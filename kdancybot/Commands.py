@@ -11,8 +11,6 @@ import logging
 import traceback
 
 logger = logging.getLogger(__name__)
-### Methods working with osu!api, to be cropped and moved to Utils
-
 
 class Commands:
     def __init__(self, config):
@@ -204,16 +202,20 @@ class Commands:
             return ""
 
         score_data = convert_np_response_to_score_data(response)
-        # if player hit at least one note, then do usual calculation (like in !r)
+        score_data["args"] = self.osu._prepare_score_info(
+            score_data,
+            score_data["map_data"]
+        )
+        pp_if_fc = generate_pp_if_fc(score_data, [95, 98, 100])
         response_format = "{map_info} | {pp95}, {pp98}, {pp100}"
         parts = {
             "map_info": await self.map_info(
                 score_data,
                 remove_https=True
             ),
-            "pp95": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "95"),
-            "pp98": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "98"),
-            "pp100": get_pp_for_acc_from_np_response(score_data["pp_if_fc"], "100")
+            "pp95": pp_if_fc['95'],
+            "pp98": pp_if_fc['98'],
+            "pp100": pp_if_fc['100']
         }
         message = response_format.format(**parts)
         return message
@@ -231,7 +233,6 @@ class Commands:
             return "Who is this Concerned"
         user_data = user_data.json()
         username = username_from_response(user_data)
-        full_pp = user_data["statistics"]["pp"]
         top100 = self.osu.get_top_100(user_data["id"]).json()
         if len(top100) == 0:
             return f"No scores for {username} in last 24 hours"
@@ -249,7 +250,9 @@ class Commands:
 
     async def whatif(self, request):
         args = Parsing.Whatif(
-            request.arguments, self.osu, username=self.users.get(request.channel)
+            request.arguments,
+            self.osu,
+            username=self.users.get(request.channel)
         )
 
         if not args.get("pp"):
@@ -283,7 +286,7 @@ class Commands:
                 map_response = self.osu.get_beatmap(args["map_id"])
                 map_name = map_name_from_response(map_response.json())
                 message += " on " + map_name
-            except:
+            except Exception:
                 logger.warning(traceback.format_exc())
         message += f", he would be at {round(new_pp, 1):}" + "pp ("
         message += f"{round(new_pp - full_pp, 1):+} pp)"
@@ -297,14 +300,12 @@ class Commands:
         if not args.get("index"):
             args["index"] = 1
 
-        message = ""
         user_data = self.osu.get_user_data(args["username"])
         if not user_data.ok:
             return "Unknown user MyHonestReaction"
 
         user_data = user_data.json()
         username = username_from_response(user_data)
-        full_pp = user_data["statistics"]["pp"]
         top100 = self.osu.get_top_100(user_data["id"]).json()
 
         if len(top100) == 0:
@@ -347,7 +348,6 @@ class Commands:
             return "Who is this Concerned"
         user_data = user_data.json()
         username = username_from_response(user_data)
-        full_pp = user_data["statistics"]["pp"]
         recent_plays = sorted(
             self.osu.get_today_scores(user_data["id"]).json(),
             key=lambda score: float(0 if score["pp"] is None else score["pp"]),
@@ -416,7 +416,10 @@ class Commands:
             ]
             message = " ".join([part for part in message_parts if part])
             # message = f"{request.user} | [{BEATMAP_URL}{map_info['map_id']} {map_name} ({beatmap_attributes['meme']})]"
-            response = self.osu.send_pm(self.users.get(request.channel), message)
+            response = self.osu.send_pm(
+                self.users.get(request.channel),
+                message
+            )
             return f"Sent request: {map_name} {mods}"
         else:
             return "Seems like beatmap does not exist, are you sure dogQ"
