@@ -126,6 +126,7 @@ def mods_to_num(mods):
         sum += int(Mods.get(mod, 0))
     return sum
 
+
 def build_calculator(score_data):
     mods = mods_to_num(score_data["mods"])
     stats = score_data["statistics"]
@@ -152,6 +153,7 @@ def get_passed_objects(score_data):
     )
 
 
+# UNUSED
 def get_objects_count(score_data):
     beatmap = score_data["beatmap"]
     return (
@@ -201,9 +203,6 @@ def score_age(date: str) -> str:
 
 def generate_mods_string(mods) -> str:
     return f" +{''.join(mods)}" if len(mods) else ""
-
-
-# def generate_
 
 
 def parse_beatmap_link(message):
@@ -287,10 +286,11 @@ def sc_get_acc_and_pp_for_fc(response):
 
 
 # gosumemory
-def convert_mods_to_list_gm(mods):
+def convert_mods_to_list_gm(mods) -> list:
     if mods == "NM":
-        return ""
+        return []
     return [mods[i:i+2] for i in range(0, len(mods), 2)]
+
 
 def convert_gm_response_to_score_data(response):
     acc, pp = gm_get_acc_and_pp_for_fc(response)
@@ -401,5 +401,32 @@ def pp_to_str(pp_value):
     return f"{int(float(pp_value) + .5)}pp"
 
 
-def get_pp_for_acc_from_np_response(pp_if_fc, acc):
-    return f"{acc}%: {pp_to_str(pp_if_fc[acc])}"
+def format_pp_and_acc(pp_if_fc, acc):
+    return f"{acc}%: {pp_to_str(pp_if_fc)}"
+
+
+def generate_pp_if_fc(score_data, accuracies):
+    # For ease of predicting amount of 50s and 100s
+    # it's assumed you can only get 100s or 300s
+    LOWEST_ACC = 33.33
+
+    result_data = dict()
+
+    mods = mods_to_num(score_data["mods"])
+    beatmap = Beatmap(bytes=score_data["map_data"])
+    calc = Calculator(
+        mode=0,
+        mods=mods,
+        combo=score_data["args"]["max_combo"],
+    )
+    perf = calc.performance(beatmap)
+    all_objects = perf.difficulty.n_circles + perf.difficulty.n_sliders + perf.difficulty.n_spinners
+
+    for acc in accuracies:
+        n100 = int((100 - acc) / (100 - LOWEST_ACC) * all_objects)
+        n300 = all_objects - n100
+        calc.set_n300(n300)
+        calc.set_n100(n100)
+        perf = calc.performance(beatmap)
+        result_data[str(acc)] = format_pp_and_acc(perf.pp, acc)
+    return result_data

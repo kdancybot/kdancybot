@@ -45,8 +45,12 @@ class osuAPIExtended(osuAPIv2):
 
         objects_passed = get_passed_objects(score_data)
         all_objects = perf.difficulty.n_circles + perf.difficulty.n_sliders + perf.difficulty.n_spinners
-        n100 = (score_data["statistics"]["count_100"] * all_objects) // objects_passed
-        n50 = (score_data["statistics"]["count_50"] * all_objects) // objects_passed
+        if objects_passed:
+            n100 = (score_data["statistics"]["count_100"] * all_objects) // objects_passed
+            n50 = (score_data["statistics"]["count_50"] * all_objects) // objects_passed
+        else:
+            n100 = 0
+            n50 = 0
         n300 = all_objects - n100 - n50
         acc = 100 * (n300 + n100 / 3 + n50 / 6) / all_objects
 
@@ -72,10 +76,13 @@ class osuAPIExtended(osuAPIv2):
             format_string = "{acc} {combo}"
             data = {
                 "acc": f"{round(acc, 2)}%",
+                # if for some reason we get max_combo lower than combo
+                # we don't write max_combo to avoid confusions
                 "combo": (
-                    "FC" if combo == max_combo else 
-                    f"{combo}x" if combo > max_combo # if for some reason we get max_combo lower than combo we w
-                    else f"{combo}/{max_combo}x"),
+                    "FC" if combo == max_combo else
+                    f"{combo}x" if combo > max_combo
+                    else f"{combo}/{max_combo}x"
+                )
             }
             return format_string.format(**data)
 
@@ -163,7 +170,7 @@ class osuAPIExtended(osuAPIv2):
                     args["index"] = 1
                 args["score_data"] = recent_score.json()[args["index"] - 1]
                 args["score_data"]["attributes"] = self.get_beatmap_attributes(
-                    args["score_data"]["beatmap"]["id"], 
+                    args["score_data"]["beatmap"]["id"],
                     generate_mods_payload(args["score_data"]["mods"])
                 ).json()["attributes"]
         return args
