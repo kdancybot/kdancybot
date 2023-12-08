@@ -153,7 +153,7 @@ class Commands:
                 raise Exception()
         except Exception as e:
             logger.info(str(e))
-            return self.recent_played(request)
+            return await self.recent_played(request)
 
         score_data = convert_np_response_to_score_data(response)
         score_data["args"] = self.osu._prepare_score_info(
