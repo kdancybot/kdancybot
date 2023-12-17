@@ -139,7 +139,7 @@ class Commands:
         if args["no_scores_today"]:
             return f"No scores for {args['username_rank']} in last 24 hours"
 
-        args["score_data"]["args"] = self.osu.prepare_score_info(score_data)
+        args["score_data"]["args"] = self.osu.prepare_score_info(args["score_data"])
         message = await self.map_info(
             args["score_data"],
             remove_https=True
