@@ -397,6 +397,9 @@ class Commands:
         message = " ".join([part for part in message_parts if part])
         return message
 
+    async def commands(self, request: Message):
+        return "https://github.com/kdancybot/kdancybot/wiki/Commands"
+
     async def req(self, request: Message, map_info: dict):
         BEATMAP_URL = "https://osu.ppy.sh/b/"
         beatmap = self.osu.get_beatmap(map_info["map_id"])
