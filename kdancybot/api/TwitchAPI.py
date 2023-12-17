@@ -48,6 +48,7 @@ class TwitchChatHandler:
             "map": self.commands.now_playing_map,
             "np": self.commands.now_playing,
             "nppp": self.commands.now_playing_pp,
+            "commands": self.commands.commands,
         }
         self.cd = Cooldown(self.command_templates.keys())
 
