@@ -120,9 +120,6 @@ class TwitchChatHandler:
 
     async def login(self):
         token = self.token.token()
-        # await asyncio.get_event_loop().run_in_executor(
-        #     self.executor, self.token.token
-        # )
         await self.ws.send(
             "CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands"
         )
@@ -140,14 +137,25 @@ class TwitchChatHandler:
             part_message = "PART #" + ",#".join(users)
             await self.ws.send(part_message)
             logger.info("Left channels: {}".format(", ".join(users)))
-
+    
+    async def join_channels_after_login(self):
+        users_settings = Settings.GetAll()
+        active_users = [
+            u.twitch_id
+            for u in users_settings
+            if u.bot_on and (u.commands_on or u.request_on)
+        ]
+        active_usernames = [u.username for u in Twitch.GetUsersFromIds(active_users)]
+        await self.join_channels([u for u in active_usernames if u not in self.users])
+        self.users = active_usernames
+        
     async def loop(self):
         await self.initialize()
         async for ws in websockets.connect(self.url):
             try:
                 self.ws = ws
                 await self.login()
-                await self.check_channels()
+                await self.join_channels_after_login()
                 logger.info("Joined twitch chat!")
                 await self.start_routines()
                 while True:
