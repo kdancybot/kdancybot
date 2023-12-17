@@ -173,28 +173,27 @@ class Commands:
             if response.get("error"):
                 logger.info("NP: error from server for user {}: {}".format(request.channel, response))
                 raise Exception()
-
-            score_data = convert_np_response_to_score_data(response)
-            score_data["args"] = self.osu._prepare_score_info(
-                score_data,
-                score_data["map_data"]
-            )
-
-            if score_data["max_combo"]:
-                message = self.osu.score_info_build(
-                    score_data,
-                    remove_https=True
-                )
-            else:
-                message = await self.map_info(
-                    score_data,
-                    remove_https=True
-                )                
-            return message
-            
         except Exception as e:
             logger.info(str(e))
             return await self.recent_played(request)
+
+        score_data = convert_np_response_to_score_data(response)
+        score_data["args"] = self.osu._prepare_score_info(
+            score_data,
+            score_data["map_data"]
+        )
+
+        if score_data["max_combo"]:
+            message = self.osu.score_info_build(
+                score_data,
+                remove_https=True
+            )
+        else:
+            message = await self.map_info(
+                score_data,
+                remove_https=True
+            )
+        return message
 
     async def now_playing_pp(self, request):
         try:
