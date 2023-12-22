@@ -55,9 +55,27 @@ class NPClient:
     # Encoding type is set explicitly to make sure
     # StreamCompanion's data decodes fine
     def get_np(client):
-        data = NPClient.send_command(client, "np")
-        data.encoding = 'utf-8-sig'
-        return data
+        request_limit = 3
+        for _ in range(request_limit):
+            data = NPClient.send_command(client, "np")
+            data.encoding = 'utf-8-sig'
+
+            # Really nasty fix, basically we get an error field in response json
+            # only when both of np data providers failed or osu! is not loaded yet.
+            # Latter error return string in error field, and former returns
+            # array of two elements. If one of them contains "Client.Timeout",
+            # we know that data hasn't been sent because of np data provider's
+            # timeout and request can be re-sent.
+
+            error = data.json().get("error", [])
+            logger.info(error)
+            if (any(
+                [message for message in error if "Client.Timeout" in message]
+            )): 
+                continue
+            # Nasty fix ends here
+
+            return data
 
 
 class Template:
