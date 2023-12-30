@@ -55,7 +55,7 @@ class NPClient:
     # Encoding type is set explicitly to make sure
     # StreamCompanion's data decodes fine
     def get_np(client):
-        request_limit = 3
+        request_limit = 4
         for _ in range(request_limit):
             data = NPClient.send_command(client, "np")
             data.encoding = 'utf-8-sig'
@@ -68,7 +68,7 @@ class NPClient:
             # timeout and request can be re-sent.
 
             error = data.json().get("error", [])
-            logger.info(error)
+            logger.info(f"{client} error: {error}")
             if (any(
                 [message for message in error if "Client.Timeout" in message]
             )): 
