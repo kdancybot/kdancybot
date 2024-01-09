@@ -29,6 +29,8 @@ class TwitchChatHandler:
         self.url = "ws://irc-ws.chat.twitch.tv:80"
         self.username = config["twitch"]["username"]
         self.ignored_users = [self.username, "nightbot", "streamelements"]
+        self.join_size = 20
+        self.join_timeout = 10.1  # Additional 100ms just to be sure
 
         self.aliases = None
         self.cd = None
@@ -114,17 +116,29 @@ class TwitchChatHandler:
         await self.ws.send("PASS oauth:{}".format(token))
         await self.ws.send("NICK {}".format(self.username))
 
-    async def join_channels(self, users):
+    async def __join_channels(self, users):
         if self.ws and len(users):
-            join_message = "JOIN #" + ",#".join(users)
-            await self.ws.send(join_message)
-            logger.info("Joined channels: {}".format(", ".join(users)))
+            for i in range(0, len(users), self.join_size):
+                current_users = users[i:i+self.join_size]
+                join_message = "JOIN #" + ",#".join(current_users)
+                await self.ws.send(join_message)
+                logger.info("Joined channels: {}".format(", ".join(current_users)))
+                await asyncio.sleep(self.join_timeout)
+
+    async def __part_channels(self, users):
+        if self.ws and len(users):
+            for i in range(0, len(users), self.join_size):
+                current_users = users[i:i+self.join_size]
+                part_message = "PART #" + ",#".join(current_users)
+                await self.ws.send(part_message)
+                logger.info("Left channels: {}".format(", ".join(current_users)))
+                await asyncio.sleep(self.join_timeout)
+
+    async def join_channels(self, users):
+        asyncio.create_task(self.__join_channels(users))
 
     async def part_channels(self, users):
-        if self.ws and len(users):
-            part_message = "PART #" + ",#".join(users)
-            await self.ws.send(part_message)
-            logger.info("Left channels: {}".format(", ".join(users)))
+        asyncio.create_task(self.__part_channels(users))
     
     async def join_channels_after_login(self):
         users_settings = Settings.GetAll()
@@ -203,10 +217,7 @@ class TwitchChatHandler:
     # by faking activity via sending an empty message
     async def _send_message_untimeout(self):
         if self.ws:
-            message = "PRIVMSG #{} :{}".format(
-                self.username, 
-                ""
-            )
+            message = "PRIVMSG #{} :{}".format(self.username, "")
             await self.ws.send(message)
         
     async def start_routines(self):
@@ -214,6 +225,6 @@ class TwitchChatHandler:
             self.routines = await start_routines(
                 {"func": self.check_channels, "delay": 60},
                 {"func": self.update_settings, "delay": 150},
-                {"func": self._send_message_untimeout, "delay": 450},
+                {"func": self._send_message_untimeout, "delay": 300},
                 {"func": self.update_aliases, "delay": 3600},
             )
