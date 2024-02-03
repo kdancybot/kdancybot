@@ -255,7 +255,7 @@ def round_up_to_hundred(number):
 
 
 def calculate_weighted(pp_values):
-    return [0.95**i * pp_values[i] for i in range(len(pp_values))]
+    return [0.95**i * float(pp_values[i]) for i in range(len(pp_values))]
 
 
 # NP Utils
@@ -326,12 +326,12 @@ def convert_gm_response_to_score_data(response):
         },
         "pp": response["gameplay"]["pp"]["current"],
         "pp_if_fc": {
-            "95": response["menu"]["pp"]["95"],
-            "96": response["menu"]["pp"]["96"],
-            "97": response["menu"]["pp"]["97"],
-            "98": response["menu"]["pp"]["98"],
-            "99": response["menu"]["pp"]["99"],
-            "100": response["menu"]["pp"]["100"],
+            95: response["menu"]["pp"]["95"],
+            96: response["menu"]["pp"]["96"],
+            97: response["menu"]["pp"]["97"],
+            98: response["menu"]["pp"]["98"],
+            99: response["menu"]["pp"]["99"],
+            100: response["menu"]["pp"]["100"],
         },
         "map_data": response.get("mapData", "").encode()
     }
@@ -378,12 +378,12 @@ def convert_sc_response_to_score_data(response):
         },
         "pp": response["ppIfMapEndsNow"],
         "pp_if_fc": {
-            "95": response["osu_m95PP"],
-            "96": response["osu_m96PP"],
-            "97": response["osu_m97PP"],
-            "98": response["osu_m98PP"],
-            "99": response["osu_m99PP"],
-            "100": response["osu_mSSPP"],
+            95: response["osu_m95PP"],
+            96: response["osu_m96PP"],
+            97: response["osu_m97PP"],
+            98: response["osu_m98PP"],
+            99: response["osu_m99PP"],
+            100: response["osu_mSSPP"],
         },
         "map_data": response.get("mapData", "").encode()
     }
@@ -401,7 +401,7 @@ def pp_to_str(pp_value):
     return f"{int(float(pp_value) + .5)}pp"
 
 
-def format_pp_and_acc(pp_if_fc, acc):
+def format_acc_and_pp(acc, pp_if_fc):
     return f"{acc}%: {pp_to_str(pp_if_fc)}"
 
 
@@ -412,21 +412,34 @@ def generate_pp_if_fc(score_data, accuracies):
 
     result_data = dict()
 
-    mods = mods_to_num(score_data["mods"])
-    beatmap = Beatmap(bytes=score_data["map_data"])
-    calc = Calculator(
-        mode=0,
-        mods=mods,
-        combo=score_data["args"]["max_combo"],
-    )
-    perf = calc.performance(beatmap)
-    all_objects = perf.difficulty.n_circles + perf.difficulty.n_sliders + perf.difficulty.n_spinners
-
-    for acc in accuracies:
-        n100 = int((100 - acc) / (100 - LOWEST_ACC) * all_objects)
-        n300 = all_objects - n100
-        calc.set_n300(n300)
-        calc.set_n100(n100)
+    try:
+        mods = mods_to_num(score_data["mods"])
+        beatmap = Beatmap(bytes=score_data["map_data"])
+        calc = Calculator(
+            mode=0,
+            mods=mods,
+            combo=score_data["args"]["max_combo"],
+        )
         perf = calc.performance(beatmap)
-        result_data[str(acc)] = format_pp_and_acc(perf.pp, acc)
+        all_objects = perf.difficulty.n_circles + perf.difficulty.n_sliders + perf.difficulty.n_spinners
+
+        for acc in accuracies:
+            n100 = int((100 - acc) / (100 - LOWEST_ACC) * all_objects)
+            n300 = all_objects - n100
+            calc.set_n300(n300)
+            calc.set_n100(n100)
+            perf = calc.performance(beatmap)
+            result_data[acc] = perf.pp
+    except Exception as e:
+        pass
     return result_data
+
+
+def generate_nppp_message(map_info, pps, accuracies):
+    message = f"{map_info} | "
+    pp_strings = []
+    for acc in accuracies:
+        if pps.get(acc) != None:
+            pp_strings.append(format_acc_and_pp(acc, pps[acc]))
+    
+    return message + ", ".join([acc_pp for acc_pp in pp_strings])
