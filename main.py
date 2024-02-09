@@ -8,7 +8,7 @@ import logging
 import argparse
 
 logging.basicConfig(
-    filename="osubot.log",
+    filename="logs/osubot.log",
     level=logging.INFO,
     format="%(asctime)s - %(name)-25s - %(levelname)s - %(message)s",
 )

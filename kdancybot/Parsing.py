@@ -11,6 +11,11 @@ class Parsing:
     #     def Value(token: str):
     #         pass
 
+    class Type:
+        def __init__(self, name, _type):
+            self.name = name
+            self.type = _type
+
     class Index:
         def Is(token: str):
             try:
@@ -53,25 +58,45 @@ class Parsing:
         def Value(tokens: list):
             return " ".join([token for token in tokens if token])
 
-    class Combo:
+    class ExplicitCombo:
         def Is(token: str):
             try:
-                return token[-1].lower() == "x" and int(token[:-1])
+                return (token[-1].lower() == "x" and 0 < int(token[:-1]) <= 65535)
             except ValueError:
                 return False
 
         def Value(token: str):
             return int(token[:-1])
 
-    class Accuracy:
+    class Combo:
         def Is(token: str):
             try:
-                return token[-1] == "%" and float(token[:-1])
+                return 0 < int(token) <= 65535
+            except ValueError:
+                return False
+
+        def Value(token: str):
+            return int(token)
+
+    class ExplicitAccuracy:
+        def Is(token: str):
+            try:
+                return (token[-1] == "%" and 0 < float(token[:-1]) <= 100)
             except ValueError:
                 return False
 
         def Value(token: str):
             return float(token[:-1])
+
+    class Accuracy:
+        def Is(token: str):
+            try:
+                return 0 < float(token) <= 100
+            except ValueError:
+                return False
+
+        def Value(token: str):
+            return float(token)
 
     class Misses:
         def Is(token: str):
@@ -87,6 +112,27 @@ class Parsing:
             if token[-2].lower() == "x":
                 return int(token[:-2])
             return int(token[:-1])
+
+    class ImplicitMisses:
+        def Is(token: str):
+            try:
+                return 0 <= int(token) < 65535
+            except ValueError:
+                return False
+
+        def Value(token: str):
+            return int(token)
+
+    class Mods:
+        def Is(token: str):
+            if (token[0] == "+"):
+                token = token[1:]
+            return len(token) % 2 == 0
+
+        def Value(token: str):
+            if (token[0] == "+"):
+                token = token[1:]
+            return token.upper()
 
     def Profile(tokens: list, **kwargs):
         arguments = dict()
@@ -129,16 +175,16 @@ class Parsing:
 
         # types ordered in size of sets
         # pp completely includes count, and map_id includes pp
-        ordered_types = ["count", "pp", "map_id"]
-        types = {
-            "count": Parsing.Index,
-            "pp": Parsing.PPValue,
-            "map_id": Parsing.MapID,
-        }
-        for arg_type in ordered_types:
+        types = [
+            Parsing.Type("count", Parsing.Count), 
+            Parsing.Type("pp", Parsing.PPValue), 
+            Parsing.Type("map_id", Parsing.MapID)
+        ]
+        
+        for arg_type in types:
             for i in range(len(tokens)):
-                if types[arg_type].Is(tokens[i]):
-                    arguments[arg_type] = types[arg_type].Value(tokens[i])
+                if arg_type.type.Is(tokens[i]):
+                    arguments[arg_type.name] = arg_type.type.Value(tokens[i])
                     tokens.pop(i)
                     break
 
@@ -151,51 +197,47 @@ class Parsing:
             arguments["count"] = 1
         return arguments
 
-        # if tokens:
-        #     if "--recent-fc" in tokens and osu:
-        #         tokens.remove("--recent-fc")
-        #         recent_args = Parsing.Recent(tokens)
-        #         recent_args["username"] = kwargs.get("username")
-        #         arguments["recent"] = osu.recent(recent_args)
-        #         arguments["map_id"] = arguments["recent"]["score_data"]["beatmap"]["id"]
-        #         arguments["pp"] = osu.prepare_score_info(
-        #             arguments["recent"]["score_data"]
-        #         )["perf"].pp
-
-        #     elif len(tokens) == 1:
-        #         if Parsing.PPValue.Is(tokens[0]):
-        #             arguments["pp"] = Parsing.PPValue.Value(tokens[0])
-
-        #     else:
-        #         for _ in range(2):
-        #             if Parsing.PPValue.Is(tokens[0]):
-        #                 arguments["pp"] = Parsing.PPValue.Value(tokens[0])
-        #                 if Parsing.Count.Is(tokens[1]):
-        #                     arguments["count"] = Parsing.Count.Value(tokens[1])
-        #                 elif Parsing.MapID.Is(tokens[1]):
-        #                     arguments["map_id"] = Parsing.MapID.Value(tokens[1])
-        #                 elif Parsing.Username.Is(tokens[1:]):
-        #                     arguments["username"] = Parsing.Username.Value(tokens[1:])
-        #                 else:
-        #                     tokens[0], tokens[1] = tokens[1], tokens[0]
-        #                     continue
-        #                 break
-        #             else:
-        #                 tokens[0], tokens[1] = tokens[1], tokens[0]
-        #                 continue
-
-    def PP(tokens: list, osu=None, **kwargs):
-        recent = ["r", "-r", "recent", "--recent"]
+    def Nppp(tokens: list, osu=None, **kwargs):
         arguments = dict()
-        if tokens:
-            if any(x in recent for x in tokens) and osu:
-                tokens = [x for x in tokens if x not in recent]
-                recent_args = dict()
-                recent_args["username"] = kwargs.get("username")
-                arguments["recent"] = osu.recent(recent_args)
-                arguments["map_id"] = arguments["recent"]["score_data"]["beatmap"]["id"]
-                arguments["mods"] = arguments["recent"]["score_data"]
-                # arguments["pp"] = osu.prepare_score_info(
-                #     arguments["recent"]["score_data"]
-                # )["perf"].pp
-        pass
+
+        arguments["general"] = True
+        arguments["acc"] = 0
+        arguments["misses"] = 0
+        arguments["combo"] = 0
+        arguments["mods"] = ""
+
+        types = [
+            Parsing.Type("acc", Parsing.ExplicitAccuracy), 
+            Parsing.Type("combo", Parsing.ExplicitCombo), 
+            Parsing.Type("misses", Parsing.Misses), 
+            Parsing.Type("acc", Parsing.Accuracy), 
+            Parsing.Type("combo", Parsing.Combo), 
+            Parsing.Type("misses", Parsing.ImplicitMisses), 
+            Parsing.Type("mods", Parsing.Mods), 
+        ]
+        for arg_type in types:
+            for i in range(len(tokens)):
+                if arg_type.type.Is(tokens[i]) and not arguments[arg_type.name]:
+                    arguments[arg_type.name] = arg_type.type.Value(tokens[i])
+                    tokens.pop(i)
+                    # This should be False for specific !nppp to work
+                    arguments["general"] = True
+                    break
+
+        return arguments
+
+    # def PP(tokens: list, osu=None, **kwargs):
+    #     recent = ["r", "-r", "recent", "--recent"]
+    #     arguments = dict()
+    #     if tokens:
+    #         if any(x in recent for x in tokens) and osu:
+    #             tokens = [x for x in tokens if x not in recent]
+    #             recent_args = dict()
+    #             recent_args["username"] = kwargs.get("username")
+    #             arguments["recent"] = osu.recent(recent_args)
+    #             arguments["map_id"] = arguments["recent"]["score_data"]["beatmap"]["id"]
+    #             arguments["mods"] = arguments["recent"]["score_data"]
+    #             # arguments["pp"] = osu.prepare_score_info(
+    #             #     arguments["recent"]["score_data"]
+    #             # )["perf"].pp
+    #     pass

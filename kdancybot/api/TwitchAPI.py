@@ -16,7 +16,6 @@ import traceback
 
 logger = logging.getLogger(__name__)
 
-
 class TwitchChatHandler:
     def __init__(self, config: dict):
         self.config = config
@@ -30,6 +29,8 @@ class TwitchChatHandler:
         self.url = "ws://irc-ws.chat.twitch.tv:80"
         self.username = config["twitch"]["username"]
         self.ignored_users = [self.username, "nightbot", "streamelements"]
+        self.join_size = 20
+        self.join_timeout = 10.1  # Additional 100ms just to be sure
 
         self.aliases = None
         self.cd = None
@@ -79,21 +80,9 @@ class TwitchChatHandler:
                 message.user_command,
                 message.user_command
             )
-            # personal_command_func = self.personal_commands[message.channel].get(
-            #     message.user_command
-            # )
             command_func = self.command_templates.get(command)
-            # if personal_command_func:
-            #     ret = await asyncio.get_event_loop().run_in_executor(
-            #         self.executor, personal_command_func, message
-            #     )
-            #     await self.respond_to_message(message, ret)
-            # el
             if command_func and self.cd.cd(command, message.channel):
                 response = await command_func(message)
-                # await asyncio.get_event_loop().run_in_executor(
-                #     self.executor, command_func, message
-                # )
                 await self.respond_to_message(message, response)
                 Messages.insert(
                     channel=message.channel,
@@ -127,17 +116,29 @@ class TwitchChatHandler:
         await self.ws.send("PASS oauth:{}".format(token))
         await self.ws.send("NICK {}".format(self.username))
 
-    async def join_channels(self, users):
+    async def __join_channels(self, users):
         if self.ws and len(users):
-            join_message = "JOIN #" + ",#".join(users)
-            await self.ws.send(join_message)
-            logger.info("Joined channels: {}".format(", ".join(users)))
+            for i in range(0, len(users), self.join_size):
+                current_users = users[i:i+self.join_size]
+                join_message = "JOIN #" + ",#".join(current_users)
+                await self.ws.send(join_message)
+                logger.info("Joined channels: {}".format(", ".join(current_users)))
+                await asyncio.sleep(self.join_timeout)
+
+    async def __part_channels(self, users):
+        if self.ws and len(users):
+            for i in range(0, len(users), self.join_size):
+                current_users = users[i:i+self.join_size]
+                part_message = "PART #" + ",#".join(current_users)
+                await self.ws.send(part_message)
+                logger.info("Left channels: {}".format(", ".join(current_users)))
+                await asyncio.sleep(self.join_timeout)
+
+    async def join_channels(self, users):
+        asyncio.create_task(self.__join_channels(users))
 
     async def part_channels(self, users):
-        if self.ws and len(users):
-            part_message = "PART #" + ",#".join(users)
-            await self.ws.send(part_message)
-            logger.info("Left channels: {}".format(", ".join(users)))
+        asyncio.create_task(self.__part_channels(users))
     
     async def join_channels_after_login(self):
         users_settings = Settings.GetAll()
@@ -152,7 +153,7 @@ class TwitchChatHandler:
         
     async def loop(self):
         await self.initialize()
-        async for ws in websockets.connect(self.url):
+        async for ws in websockets.connect(self.url, ping_interval=10):
             try:
                 self.ws = ws
                 await self.login()
@@ -160,7 +161,8 @@ class TwitchChatHandler:
                 logger.info("Joined twitch chat!")
                 await self.start_routines()
                 while True:
-                    message = Message(await ws.recv())
+                    received = await ws.recv()
+                    message = Message(received)
                     logger.debug(message)
                     asyncio.create_task(self.handle_message(message))
             except Exception as e:
@@ -210,10 +212,19 @@ class TwitchChatHandler:
         logger.info("Updating aliases")
         self.aliases = Aliases.GetAll()
 
+    # Twitch seems to disconnect user if they don't send a message
+    # for 11 minutes, this function exists to (in hacky way) fix that problem
+    # by faking activity via sending an empty message
+    async def _send_message_untimeout(self):
+        if self.ws:
+            message = "PRIVMSG #{} :{}".format(self.username, "")
+            await self.ws.send(message)
+        
     async def start_routines(self):
         if not self.routines:
             self.routines = await start_routines(
                 {"func": self.check_channels, "delay": 60},
                 {"func": self.update_settings, "delay": 150},
+                {"func": self._send_message_untimeout, "delay": 300},
                 {"func": self.update_aliases, "delay": 3600},
             )

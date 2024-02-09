@@ -32,42 +32,50 @@ class osuAPIExtended(osuAPIv2):
 
     def _prepare_score_info(self, score_data, map_data):
         args = dict()
+        try:
+            args["max_combo"] = score_data["args"]["max_combo"]
+            args["star_rating"] = score_data["attributes"]["star_rating"]
+        except Exception:
+            pass
 
-        beatmap = Beatmap(bytes=map_data)
-        calc = Calculator(mods=mods_to_num(score_data["mods"]))
-        perf = calc.performance(beatmap)
+        try:
+            beatmap = Beatmap(bytes=map_data)
+            calc = Calculator(mods=mods_to_num(score_data["mods"]))
+            perf = calc.performance(beatmap)
 
-        args["max_combo"] = perf.difficulty.max_combo
-        args["star_rating"] = perf.difficulty.stars
+            args["max_combo"] = perf.difficulty.max_combo
+            args["star_rating"] = perf.difficulty.stars
 
-        calc = build_calculator(score_data)
-        curr_perf = calc.performance(beatmap)
+            calc = build_calculator(score_data)
+            curr_perf = calc.performance(beatmap)
 
-        objects_passed = get_passed_objects(score_data)
-        all_objects = perf.difficulty.n_circles + perf.difficulty.n_sliders + perf.difficulty.n_spinners
-        if objects_passed:
-            n100 = (score_data["statistics"]["count_100"] * all_objects) // objects_passed
-            n50 = (score_data["statistics"]["count_50"] * all_objects) // objects_passed
-        else:
-            n100 = 0
-            n50 = 0
-        n300 = all_objects - n100 - n50
-        acc = 100 * (n300 + n100 / 3 + n50 / 6) / all_objects
+            objects_passed = get_passed_objects(score_data)
+            all_objects = perf.difficulty.n_circles + perf.difficulty.n_sliders + perf.difficulty.n_spinners
+            if objects_passed:
+                n100 = (score_data["statistics"]["count_100"] * all_objects) // objects_passed
+                n50 = (score_data["statistics"]["count_50"] * all_objects) // objects_passed
+            else:
+                n100 = 0
+                n50 = 0
+            n300 = all_objects - n100 - n50
+            acc = 100 * (n300 + n100 / 3 + n50 / 6) / all_objects
 
-        calc.set_passed_objects(all_objects)
-        calc.set_n300(n300)
-        calc.set_n100(n100)
-        calc.set_n50(n50)
-        calc.set_n_misses(0)
-        calc.set_combo(args["max_combo"])
-        perf = calc.performance(beatmap)
+            calc.set_passed_objects(all_objects)
+            calc.set_n300(n300)
+            calc.set_n100(n100)
+            calc.set_n50(n50)
+            calc.set_n_misses(0)
+            calc.set_combo(args["max_combo"])
+            perf = calc.performance(beatmap)
 
-        # args["max_combo"] = perf.difficulty.max_combo
-        # args["star_rating"] = perf.difficulty.stars
-        args["pp"] = curr_perf.pp
-        args["pp_for_fc"] = perf.pp
-        args["acc_for_fc"] = acc
-        return args
+            args["pp"] = curr_perf.pp
+            args["pp_for_fc"] = perf.pp
+            args["acc_for_fc"] = acc
+
+        except Exception as e:
+            pass
+        finally:
+            return args
 
     def build_acc_n_combo(self, combo, max_combo, acc, **kwargs):
         if acc >= 100 and combo == max_combo:
@@ -133,6 +141,33 @@ class osuAPIExtended(osuAPIv2):
         }
         return format_string.format(**parts)
 
+    def nppp_build(self, score_data, remove_https=False):
+        format_string = (
+            "{map_info} {acc_n_combo} {misses} {pp} {pp_if_fc} {if_ranked}"
+        )
+        data = {
+            "combo": score_data["max_combo"],
+            "max_combo": score_data["args"]["max_combo"],
+            "acc": score_data["accuracy"] * 100,
+            "pp": score_data["pp"] if score_data["pp"] else score_data["args"]["pp"],
+            "misses": score_data["statistics"]["count_miss"],
+            "acc_if_fc": score_data["args"]["acc_for_fc"],
+            "pp_if_fc": score_data["args"]["pp_for_fc"],
+            "status": score_data["beatmap"]["status"],
+            "created_at": score_data["created_at"],
+        }
+        parts = {
+            "map_info": self.map_info_build(score_data, remove_https),
+            "acc_n_combo": self.build_acc_n_combo(**data),
+            "misses": self.build_misses(**data),
+            "pp": f"{int(data['pp'] + .5)}pp",
+            "pp_if_fc": self.build_pp_if_fc(**data),
+            "if_ranked": "if ranked"
+            if data["status"] not in ["ranked", "approved"]
+            else "",
+        }
+        return format_string.format(**parts)
+
     def map_info_build(self, score_data, remove_https=False):
         format_string = "{link} {map_name} {star_rating} {mods}"
         link = ""
@@ -143,7 +178,10 @@ class osuAPIExtended(osuAPIv2):
         data = {
             "link": link,
             "map_name": map_name_from_response(score_data),
-            "star_rating": f"{round(score_data['args']['star_rating'], 2)}*",
+            "star_rating": (
+                f"{round(score_data['args']['star_rating'], 2)}*" 
+                if score_data['args']['star_rating'] > 0 else ""
+            ),
             "mods": generate_mods_string(score_data["mods"]),
         }
         return format_string.format(**data)
