@@ -220,6 +220,7 @@ class Parsing:
                 if arg_type.type.Is(tokens[i]) and not arguments[arg_type.name]:
                     arguments[arg_type.name] = arg_type.type.Value(tokens[i])
                     tokens.pop(i)
+                    # This should be False for specific !nppp to work
                     arguments["general"] = True
                     break
 
