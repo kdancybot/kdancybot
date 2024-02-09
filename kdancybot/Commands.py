@@ -197,7 +197,8 @@ class Commands:
             logger.info(str(e))
             return await self.recent_played(request)
 
-    async def now_playing_pp(self, request):
+    async def now_playing_pp_general(self, request):
+        accuracies = [95, 98, 100]
         try:
             response = kdancybot.api.np.NPClient.get_np(request.channel).json()
             if response.get("error"):
@@ -208,23 +209,54 @@ class Commands:
             return ""
 
         score_data = convert_np_response_to_score_data(response)
-        score_data["args"] = self.osu._prepare_score_info(
-            score_data,
-            score_data["map_data"]
+        try:
+            score_data["args"] = self.osu._prepare_score_info(
+                score_data,
+                score_data["map_data"]
+            )
+        except Exception as e:
+            logger.info(str(e))
+        pp_if_fc = score_data["pp_if_fc"]
+        pp_if_fc.update(
+            generate_pp_if_fc(
+                score_data,
+                accuracies
+            )
         )
-        pp_if_fc = generate_pp_if_fc(score_data, [95, 98, 100])
-        response_format = "{map_info} | {pp95}, {pp98}, {pp100}"
-        parts = {
-            "map_info": await self.map_info(
+        return generate_nppp_message(
+            await self.map_info(
                 score_data,
                 remove_https=True
-            ),
-            "pp95": pp_if_fc['95'],
-            "pp98": pp_if_fc['98'],
-            "pp100": pp_if_fc['100']
-        }
-        message = response_format.format(**parts)
-        return message
+            ), pp_if_fc, accuracies
+        )
+
+    async def now_playing_pp_specific(self, request):
+        args = Parsing.Nppp(request.arguments)
+        try:
+            response = kdancybot.api.np.NPClient.get_np(request.channel).json()
+            if response.get("error"):
+                logger.info("NP: error from server for user {}: {}".format(request.channel, response))
+                raise Exception()
+        except Exception as e:
+            logger.info(str(e))
+            return ""
+
+        score_data = convert_np_response_to_score_data(response)
+        try:
+            score_data["args"] = self.osu._prepare_score_info(
+                score_data,
+                score_data["map_data"]
+            )
+        except Exception as e:
+            logger.info(str(e))
+
+
+    async def now_playing_pp(self, request):
+        args = Parsing.Nppp(request.arguments)
+        if args["general"]:
+            return await self.now_playing_pp_general(request)
+        else:
+            return await self.now_playing_pp_specific(request)
 
     async def top(self, request):
         args = Parsing.Top(request.arguments)

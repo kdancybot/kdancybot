@@ -99,7 +99,7 @@ def pp_to_overtake(top100, user_pp, goal_pp):
 
     # Here we make a guess that the highest pp score a player can get is
     # their top play + 25% rounded up to next hundred
-    max_score_pp = round_up_to_hundred(pp_values[0] * 1.25)
+    max_score_pp = round_up_to_hundred((pp_values[0] or 0) * 1.25)
 
     # if player gets 100 max_score_pp's and still doesn't get to goal pp
     if max_score_pp * 20 + bonus_pp < goal_pp:
@@ -255,8 +255,7 @@ def round_up_to_hundred(number):
 
 
 def calculate_weighted(pp_values):
-    return [0.95**i * float(pp_values[i]) for i in range(len(pp_values))]
-
+    return [0.95**i * float(pp_values[i]) for i in range(len(pp_values)) if pp_values[i]]
 
 # NP Utils
 
