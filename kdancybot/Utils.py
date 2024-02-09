@@ -257,7 +257,6 @@ def round_up_to_hundred(number):
 def calculate_weighted(pp_values):
     return [0.95**i * float(pp_values[i]) for i in range(len(pp_values)) if pp_values[i]]
 
-
 # NP Utils
 
 
