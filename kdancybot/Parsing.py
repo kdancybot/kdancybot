@@ -149,6 +149,7 @@ class Parsing:
         if arguments["count"] > 1 and not arguments.get("pp", ""):
             arguments["pp"] = arguments["count"]
             arguments["count"] = 1
+        return arguments
 
         # if tokens:
         #     if "--recent-fc" in tokens and osu:
@@ -182,7 +183,6 @@ class Parsing:
         #             else:
         #                 tokens[0], tokens[1] = tokens[1], tokens[0]
         #                 continue
-        return arguments
 
     def PP(tokens: list, osu=None, **kwargs):
         recent = ["r", "-r", "recent", "--recent"]
