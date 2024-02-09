@@ -195,8 +195,8 @@ class Parsing:
         if arguments["count"] > 1 and not arguments.get("pp", ""):
             arguments["pp"] = arguments["count"]
             arguments["count"] = 1
+        return arguments
 
-        
     def Nppp(tokens: list, osu=None, **kwargs):
         arguments = dict()
 
