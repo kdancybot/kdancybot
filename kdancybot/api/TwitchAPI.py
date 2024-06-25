@@ -105,6 +105,8 @@ class TwitchChatHandler:
         try:
             if message.type == "PRIVMSG":
                 await self.handle_privmsg(message)
+            else:
+                logger.info(message)
         except Exception as e:
             logger.warning(traceback.format_exc())
 
@@ -155,6 +157,7 @@ class TwitchChatHandler:
         await self.initialize()
         async for ws in websockets.connect(self.url, ping_interval=10):
             try:
+                self.reset_data_after_exception()
                 self.ws = ws
                 await self.login()
                 await self.join_channels_after_login()
