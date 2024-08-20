@@ -24,7 +24,7 @@ class TwitchChatHandler:
         self.routines = None
         self.settings = Settings.GetAll()  # CURRENTLY USELESS
         self.ws = None
-        self.users = list()
+        self.users = set()
         # self.personal_commands = PersonalCommands(config)
         self.url = "ws://irc-ws.chat.twitch.tv:80"
         self.username = config["twitch"]["username"]
@@ -106,6 +106,7 @@ class TwitchChatHandler:
             if message.type == "PRIVMSG":
                 await self.handle_privmsg(message)
             else:
+                self.internal_channel_status_management(message)
                 logger.debug(message)
         except Exception as e:
             logger.warning(traceback.format_exc())
@@ -124,7 +125,7 @@ class TwitchChatHandler:
                 current_users = users[i:i+self.join_size]
                 join_message = "JOIN #" + ",#".join(current_users)
                 await self.ws.send(join_message)
-                logger.info("Joined channels: {}".format(", ".join(current_users)))
+                logger.info("Sent JOIN for channels: {}".format(", ".join(current_users)))
                 await asyncio.sleep(self.join_timeout)
 
     async def __part_channels(self, users):
@@ -133,11 +134,20 @@ class TwitchChatHandler:
                 current_users = users[i:i+self.join_size]
                 part_message = "PART #" + ",#".join(current_users)
                 await self.ws.send(part_message)
-                logger.info("Left channels: {}".format(", ".join(current_users)))
+                logger.info("Sent PART for channels: {}".format(", ".join(current_users)))
                 await asyncio.sleep(self.join_timeout)
 
     async def join_channels(self, users):
         asyncio.create_task(self.__join_channels(users))
+    
+    def internal_channel_status_management(self, message):
+        if message.user == "kdancybot":
+            if message.type == "JOIN":
+                self.users.add(message.channel)
+                logger.info("Joined channel: {}".format(message.channel))
+            elif message.type == "PART":
+                self.users.discard(message.channel)
+                logger.info("Left channel: {}".format(message.channel))
 
     async def part_channels(self, users):
         asyncio.create_task(self.__part_channels(users))
@@ -151,7 +161,7 @@ class TwitchChatHandler:
         ]
         active_usernames = [u.username for u in Twitch.GetUsersFromIds(active_users)]
         await self.join_channels([u for u in active_usernames if u not in self.users])
-        self.users = active_usernames
+        # self.users = active_usernames
         
     async def loop(self):
         await self.initialize()
@@ -184,7 +194,7 @@ class TwitchChatHandler:
 
     def reset_data_after_exception(self):
         self.ws = None
-        self.users = list()
+        self.users = set()
 
     async def check_channels(self):
         users_settings = Settings.GetAll()
@@ -205,7 +215,7 @@ class TwitchChatHandler:
                 if u.username in self.users
             ]
         )
-        self.users = active_usernames
+        # self.users = active_usernames
 
     async def update_settings(self):
         logger.info("Updating settings")
