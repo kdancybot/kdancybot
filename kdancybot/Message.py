@@ -105,9 +105,10 @@ class Message:
         if self.params is not None:
             chan_index = get_index(params, "#")
             if chan_index is not None:
-                self.channel = params[
+                raw_channel = params[
                     chan_index + 1 : get_index(params, " ", chan_index)
                 ]
+                self.channel = raw_channel.split("\r\n")[0]
 
     def parse_message(self, split):
         # Not everything we get sent has a message attached to it. If there is no message, we use ""
