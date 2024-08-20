@@ -106,7 +106,7 @@ class TwitchChatHandler:
             if message.type == "PRIVMSG":
                 await self.handle_privmsg(message)
             else:
-                logger.info(message)
+                logger.debug(message)
         except Exception as e:
             logger.warning(traceback.format_exc())
 
